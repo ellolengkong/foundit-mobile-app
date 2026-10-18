@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:foundit/main.dart';
+import 'package:foundit/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('FoundItApp smoke test - verifies Beranda and navigation', (
+    WidgetTester tester,
+  ) async {
+    // Build FoundItApp and trigger a frame.
+    await tester.pumpWidget(const FoundItApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify app brand title is rendered.
+    expect(find.text('FoundIt'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify type tabs exist.
+    expect(find.text('Semua'), findsWidgets);
+    expect(find.text('Hilang'), findsWidgets);
+    expect(find.text('Ditemukan'), findsWidgets);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify bottom navigation items exist.
+    expect(find.text('Beranda'), findsOneWidget);
+    expect(find.text('Profil'), findsOneWidget);
+
+    // Verify center FAB exists.
+    expect(find.byIcon(Icons.add), findsOneWidget);
   });
 }
