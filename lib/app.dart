@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'core/services/auth_service.dart';
+import 'core/services/flag_repository.dart';
+import 'core/services/report_repository.dart';
+import 'core/services/supabase_auth_service.dart';
+import 'core/services/supabase_flag_repository.dart';
+import 'core/services/supabase_report_repository.dart';
+import 'core/services/supabase_service.dart';
 import 'core/theme/app_theme.dart';
 import 'data/mock/foundit_scope.dart';
 import 'data/mock/mock_auth_service.dart';
@@ -16,25 +23,46 @@ class FoundItApp extends StatefulWidget {
     this.flagRepository,
   });
 
-  final MockReportRepository? repository;
-  final MockAuthService? authService;
-  final MockFlagRepository? flagRepository;
+  final ReportRepository? repository;
+  final AuthService? authService;
+  final FlagRepository? flagRepository;
 
   @override
   State<FoundItApp> createState() => _FoundItAppState();
 }
 
 class _FoundItAppState extends State<FoundItApp> {
-  late final MockReportRepository _repository;
-  late final MockAuthService _authService;
-  late final MockFlagRepository _flagRepository;
+  late final ReportRepository _repository;
+  late final AuthService _authService;
+  late final FlagRepository _flagRepository;
 
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ?? MockReportRepository();
-    _authService = widget.authService ?? MockAuthService();
-    _flagRepository = widget.flagRepository ?? MockFlagRepository();
+    _repository = widget.repository ?? _resolveReportRepository();
+    _authService = widget.authService ?? _resolveAuthService();
+    _flagRepository = widget.flagRepository ?? _resolveFlagRepository();
+  }
+
+  static ReportRepository _resolveReportRepository() {
+    if (SupabaseService.isInitialized) {
+      return SupabaseReportRepository();
+    }
+    return MockReportRepository();
+  }
+
+  static AuthService _resolveAuthService() {
+    if (SupabaseService.isInitialized) {
+      return SupabaseAuthService();
+    }
+    return MockAuthService();
+  }
+
+  static FlagRepository _resolveFlagRepository() {
+    if (SupabaseService.isInitialized) {
+      return SupabaseFlagRepository();
+    }
+    return MockFlagRepository();
   }
 
   @override

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/services/auth_service.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/mock/foundit_scope.dart';
 import '../../widgets/primary_button.dart';
 
@@ -36,26 +38,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
 
-    final scope = FoundItScope.of(context);
-    scope.authService.updateProfile(
-      fullName: _nameController.text.trim(),
-      whatsapp: _phoneController.text.trim().isNotEmpty
-          ? _phoneController.text.trim()
-          : null,
-      allowWhatsappContact: _whatsappOptIn,
-    );
+    try {
+      final scope = FoundItScope.of(context);
+      await scope.authService.updateProfile(
+        fullName: _nameController.text.trim(),
+        whatsapp: _phoneController.text.trim().isNotEmpty
+            ? _phoneController.text.trim()
+            : null,
+        allowWhatsappContact: _whatsappOptIn,
+      );
 
-    setState(() => _isSaving = false);
-    Navigator.of(context).pop();
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      Navigator.of(context).pop();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profil berhasil diperbarui.')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil berhasil diperbarui.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      final message = e is AuthFailure
+          ? e.message
+          : e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -96,6 +113,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   hintText: '081234567890',
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) return null;
+                  final digits = val.replaceAll(RegExp(r'\D'), '');
+                  if (digits.length < 10 || digits.length > 15) {
+                    return 'Nomor WhatsApp harus 10-15 digit angka.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
 

@@ -12,6 +12,7 @@ import '../../widgets/status_chip.dart';
 import '../auth/login_screen.dart';
 import '../auth/signup_screen.dart';
 import '../matches/matches_screen.dart';
+import '../report/create_report_screen.dart';
 
 /// Detail screen for a single lost or found report.
 class ReportDetailScreen extends StatelessWidget {
@@ -39,7 +40,9 @@ class ReportDetailScreen extends StatelessWidget {
         }
 
         final currentUser = scope.authService.currentUser;
-        final isOwner = currentUser != null && currentUser.id == report.ownerId;
+        final isOwner = currentUser != null &&
+            (currentUser.id == report.ownerId ||
+                scope.repository.isUserReportOwner(report.id, currentUser.id));
         final categoryLabel =
             categoryByKey(report.category)?.label ?? report.category;
 
@@ -63,27 +66,16 @@ class ReportDetailScreen extends StatelessWidget {
                 Container(
                   height: 220,
                   color: AppColors.primarySoft,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          report.reportType == ReportType.lost
-                              ? Icons.search
-                              : Icons.check_circle_outline,
-                          size: 56,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Foto Barang',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: report.publicPhotoUrl != null
+                      ? Image.network(
+                          report.publicPhotoUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: 220,
+                          errorBuilder: (context, error, stackTrace) =>
+                              _buildPhotoFallback(report, textTheme),
+                        )
+                      : _buildPhotoFallback(report, textTheme),
                 ),
 
                 Padding(
@@ -250,30 +242,50 @@ class ReportDetailScreen extends StatelessWidget {
                           PrimaryButton(
                             label: 'Tandai Selesai (Ditemukan)',
                             icon: Icons.check,
-                            onPressed: () {
-                              scope.repository.resolveReport(report.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Laporan ditandai sebagai Selesai.',
+                            onPressed: () async {
+                              await scope.repository.resolveReport(report.id);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Laporan ditandai sebagai Selesai.',
+                                    ),
                                   ),
-                                ),
-                              );
+                                );
+                              }
                             },
                           )
                         else
                           PrimaryButton(
                             label: 'Aktifkan Kembali Laporan',
                             icon: Icons.refresh,
-                            onPressed: () {
-                              scope.repository.reopenReport(report.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Laporan diaktifkan kembali.'),
-                                ),
-                              );
+                            onPressed: () async {
+                              await scope.repository.reopenReport(report.id);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Laporan diaktifkan kembali.'),
+                                  ),
+                                );
+                              }
                             },
                           ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    CreateReportScreen(initialReport: report),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit Laporan'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
                           onPressed: () =>
@@ -484,7 +496,10 @@ class ReportDetailScreen extends StatelessWidget {
 
     if (currentUserId == null) return;
 
-    if (currentUserId == report.ownerId) {
+    final isOwner = currentUserId == report.ownerId ||
+        scope.repository.isUserReportOwner(report.id, currentUserId);
+
+    if (isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -539,14 +554,16 @@ class ReportDetailScreen extends StatelessWidget {
                 child: const Text('Batal'),
               ),
               FilledButton(
-                onPressed: () {
-                  final success = scope.flagRepository.submitFlag(
+                onPressed: () async {
+                  final success = await scope.flagRepository.submitFlag(
                     reportId: report.id,
                     reporterId: currentUserId,
                     reason: selectedReason,
                   );
 
+                  if (!ctx.mounted) return;
                   Navigator.of(ctx).pop();
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -585,15 +602,56 @@ class ReportDetailScreen extends StatelessWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              scope.repository.deleteReport(reportId);
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Laporan berhasil dihapus.')),
-              );
+              try {
+                await scope.repository.deleteReport(reportId);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Laporan berhasil dihapus.')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal menghapus laporan: $e')),
+                  );
+                }
+              }
             },
             child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoFallback(Report report, TextTheme textTheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.image_outlined,
+            size: 56,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Foto Barang',
+            style: textTheme.bodyMedium?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            report.photoPath == null || report.photoPath!.isEmpty
+                ? 'Tidak ada foto yang dilampirkan'
+                : 'Foto tersimpan di cloud',
+            style: textTheme.labelSmall?.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),

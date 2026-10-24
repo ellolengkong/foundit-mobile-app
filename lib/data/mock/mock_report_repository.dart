@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 
 import '../../core/constants/report_enums.dart';
+import '../../core/services/report_repository.dart';
 import '../models/report.dart';
 import 'mock_reports.dart';
 
@@ -8,17 +9,19 @@ import 'mock_reports.dart';
 ///
 /// Pre-populated with [kMockReports]. Mutating operations notify listeners
 /// so screens rebuild automatically.
-class MockReportRepository extends ChangeNotifier {
+class MockReportRepository extends ReportRepository {
   MockReportRepository() : _reports = List<Report>.from(kMockReports);
 
   final List<Report> _reports;
 
   /// All reports in the repository (unmodifiable view).
+  @override
   List<Report> get allReports => List.unmodifiable(_reports);
 
   /// Returns publicly visible reports filtered by criteria.
   ///
   /// Public feed rule: only active + visible reports appear.
+  @override
   List<Report> getPublicReports({
     ReportType? type,
     String? category,
@@ -79,11 +82,13 @@ class MockReportRepository extends ChangeNotifier {
   }
 
   /// Returns all reports belonging to [ownerId], including resolved and hidden.
+  @override
   List<Report> getUserReports(String ownerId) {
     return _reports.where((r) => r.ownerId == ownerId).toList();
   }
 
   /// Finds a single report by its ID.
+  @override
   Report? getReportById(String id) {
     try {
       return _reports.firstWhere((r) => r.id == id);
@@ -92,23 +97,50 @@ class MockReportRepository extends ChangeNotifier {
     }
   }
 
+  @override
+  bool isUserReportOwner(String reportId, String userId) {
+    return getUserReports(userId).any((r) => r.id == reportId);
+  }
+
+  @override
+  Future<void> refresh() {
+    return Future.value();
+  }
+
   /// Adds a new report to the repository (inserted at top).
-  void createReport(Report report) {
+  @override
+  Future<Report> createReport(
+    Report report, {
+    Uint8List? photoBytes,
+    String? photoMimeType,
+  }) {
     _reports.insert(0, report);
     notifyListeners();
+    return Future.value(report);
   }
 
   /// Updates an existing report.
-  void updateReport(Report updated) {
+  @override
+  Future<void> updateReport(
+    Report updated, {
+    Uint8List? newPhotoBytes,
+    String? photoMimeType,
+    bool removePhoto = false,
+  }) {
     final idx = _reports.indexWhere((r) => r.id == updated.id);
     if (idx != -1) {
-      _reports[idx] = updated.copyWith(updatedAt: DateTime.now());
+      _reports[idx] = updated.copyWith(
+        photoPath: removePhoto ? null : updated.photoPath,
+        updatedAt: DateTime.now(),
+      );
       notifyListeners();
     }
+    return Future.value();
   }
 
   /// Marks a report as resolved.
-  void resolveReport(String id) {
+  @override
+  Future<void> resolveReport(String id) {
     final idx = _reports.indexWhere((r) => r.id == id);
     if (idx != -1) {
       _reports[idx] = _reports[idx].copyWith(
@@ -117,10 +149,12 @@ class MockReportRepository extends ChangeNotifier {
       );
       notifyListeners();
     }
+    return Future.value();
   }
 
   /// Reopens a resolved report back to active.
-  void reopenReport(String id) {
+  @override
+  Future<void> reopenReport(String id) {
     final idx = _reports.indexWhere((r) => r.id == id);
     if (idx != -1) {
       _reports[idx] = _reports[idx].copyWith(
@@ -129,15 +163,19 @@ class MockReportRepository extends ChangeNotifier {
       );
       notifyListeners();
     }
+    return Future.value();
   }
 
   /// Deletes a report from the repository.
-  void deleteReport(String id) {
+  @override
+  Future<void> deleteReport(String id) {
     _reports.removeWhere((r) => r.id == id);
     notifyListeners();
+    return Future.value();
   }
 
   /// Changes the moderation status of a report (admin operation).
+  @override
   void setModerationStatus(String id, ModerationStatus status) {
     final idx = _reports.indexWhere((r) => r.id == id);
     if (idx != -1) {

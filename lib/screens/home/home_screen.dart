@@ -100,8 +100,11 @@ class _HomeScreenState extends State<HomeScreen> {
             _startDateFilter != null || _endDateFilter != null;
 
         return SafeArea(
-          child: CustomScrollView(
-            slivers: [
+          child: RefreshIndicator(
+            onRefresh: () => scope.repository.refresh(),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
               // ── Header ────────────────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
@@ -281,9 +284,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
   }
 }
 

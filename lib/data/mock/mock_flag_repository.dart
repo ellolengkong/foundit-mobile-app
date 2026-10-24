@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart';
 
 import '../../core/constants/report_enums.dart';
+import '../../core/services/flag_repository.dart';
 import '../models/report_flag.dart';
 
 /// In-memory repository acting as the mock source of truth for report flags.
-class MockFlagRepository extends ChangeNotifier {
+class MockFlagRepository extends FlagRepository {
   MockFlagRepository()
     : _flags = [
         ReportFlag(
@@ -29,16 +29,28 @@ class MockFlagRepository extends ChangeNotifier {
 
   final List<ReportFlag> _flags;
 
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  Future<void> refresh() => Future.value();
+
   /// Unmodifiable view of all flags in repository.
+  @override
   List<ReportFlag> get allFlags => List.unmodifiable(_flags);
 
   /// Only flags that are open and pending review.
+  @override
   List<ReportFlag> get openFlags =>
       _flags.where((f) => f.reviewStatus == FlagReviewStatus.open).toList();
 
   /// Submits a new flag for a report.
   ///
   /// Prevents duplicate flagging of the same report by the same user.
+  @override
   bool submitFlag({
     required String reportId,
     required String reporterId,
@@ -76,13 +88,16 @@ class MockFlagRepository extends ChangeNotifier {
     }
   }
 
+  @override
   void dismissFlag(String flagId) =>
       updateReviewStatus(flagId, FlagReviewStatus.dismissed);
 
+  @override
   void reviewFlag(String flagId) =>
       updateReviewStatus(flagId, FlagReviewStatus.reviewed);
 
   /// Resolves all open flags associated with a report (e.g. when hidden by admin).
+  @override
   void resolveFlagsForReport(
     String reportId, {
     FlagReviewStatus status = FlagReviewStatus.reviewed,

@@ -114,7 +114,7 @@ One row equals one report. Publicly visible fields are intentionally public; do 
 | `item_name` | `text` | Yes | Short name, e.g. `Dompet hitam`; recommended maximum 100 characters. |
 | `category` | `text` | Yes | One fixed key from Section 5. |
 | `description` | `text` | No | Public description; recommended maximum 500 characters. Do not include private verification clues or sensitive IDs. |
-| `photo_path` | `text` | No | Storage object path, e.g. `{owner_id}/{report_id}.jpg`; `NULL` if no photo. Never store a signed URL or full public URL here. |
+| `photo_path` | `text` | No | Storage object path, e.g. `{report_id}/photo` (no extension); `NULL` if no photo. Never store bucket prefix or full URL here. |
 | `campus_area` | `text` | Yes | Verified faculty/area choice. |
 | `building_name` | `text` | No | Building/facility; nullable when unknown or `Lainnya`. |
 | `specific_location` | `text` | No | Text such as floor, room, or landmark; no GPS coordinates in MVP. |
@@ -202,12 +202,12 @@ No `matches` table is needed. A deterministic Dart function computes the score w
 **Access choice:** public bucket for deliberately public report images.
 
 - Store one optional JPEG/PNG/WebP image per report; compress to approximately 1 MB or less.
-- Suggested object path: `{owner_uuid}/{report_uuid}.jpg` (use the matching extension for actual format).
-- Store only the object path in `reports.photo_path`. Build the public URL using the Storage client when displaying the photo.
-- A public bucket allows anyone with the asset URL to retrieve that image; Storage policies still need to restrict upload, overwrite, and deletion. Never upload sensitive documents, readable identity/bank numbers, or private photos.
-- Storage RLS must restrict uploads and replacements to the authenticated owner's folder (`storage.foldername(name)[1] = auth.uid()::text`) and the `report-photos` bucket. Delete is allowed only to the owner or an admin whose role is checked by a secure helper. If upsert/overwrite is enabled, add properly scoped SELECT/UPDATE policies; otherwise avoid upsert.
-- When the user replaces/deletes a report photo, remove the previous object through the Storage API. If a report is hidden due to sensitive image content, moderation should also remove the object. Do not modify Supabase's `storage` schema directly; use Storage APIs.
-- Upload flow: create report without photo → upload image to the owner folder → update `photo_path`. If upload fails, retain the report without an image and tell the user. Clean up orphaned objects where feasible.
+- Fixed object path: `{report_id}/photo` (no extension; avoids exposing owner UUID).
+- Store only the relative object path in `reports.photo_path` (e.g. `{report_id}/photo`). Build the public URL using the Storage client when displaying the photo: `supabase.storage.from('report-photos').getPublicUrl(photoPath)`.
+- A public bucket allows anyone with the asset URL to retrieve that image; Storage policies restrict upload, overwrite, and deletion. Never upload sensitive documents, readable identity/bank numbers, or private photos.
+- Storage RLS restricts upload, view, and replacement to objects where the folder corresponds to an existing report owned by the authenticated user (`EXISTS (SELECT 1 FROM public.reports r WHERE r.id::text = (storage.foldername(name))[1] AND r.owner_id = auth.uid())`) and the filename is strictly `photo`. Delete is allowed to the report owner or an admin whose role is checked by `is_admin()`.
+- When the user replaces/deletes a report photo, remove or overwrite the object through the Storage API. If a report is hidden due to sensitive image content, moderation should also remove the object. Do not modify Supabase's `storage` schema directly; use Storage APIs.
+- Upload flow: create report in `public.reports` first → upload image to `{report_id}/photo` with matching MIME contentType → update `photo_path`. If upload fails, retain the report without an image and inform the user. Clean up orphaned objects where feasible.
 
 ## 8. Row Level Security and permissions matrix
 

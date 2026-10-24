@@ -1,0 +1,16 @@
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local
+
+# Node.js dependencies
+node_modules/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -25,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _debugTapCount = 0;
 
   void _handleDebugTap(BuildContext context, FoundItScope scope) {
+    if (!kDebugMode) return;
     _debugTapCount++;
     if (_debugTapCount >= 5) {
       _debugTapCount = 0;
@@ -118,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 32),
             GestureDetector(
               onTap: () => _handleDebugTap(context, scope),
-              onLongPress: () => _showDebugSheet(context, scope),
+              onLongPress: kDebugMode ? () => _showDebugSheet(context, scope) : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   vertical: 8,
@@ -150,9 +152,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context, _) {
         final myReports = scope.repository.getUserReports(user.id);
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-          children: [
+        return RefreshIndicator(
+          onRefresh: () => scope.repository.refresh(),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+            children: [
             // ── User Card ─────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(16),
@@ -237,18 +242,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.primarySoft,
+                                color: user.isAdmin
+                                    ? AppColors.lostSoft
+                                    : AppColors.primarySoft,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'Mahasiswa UNSRAT',
+                                user.isAdmin
+                                    ? 'Admin Kampus'
+                                    : 'Mahasiswa UNSRAT',
                                 style: textTheme.labelSmall?.copyWith(
-                                  color: AppColors.primary,
+                                  color: user.isAdmin
+                                      ? AppColors.lost
+                                      : AppColors.primary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                            if (scope.authService.isAdminMode) ...[
+                            if (scope.authService.canAccessAdmin) ...[
                               const SizedBox(width: 6),
                               InkWell(
                                 onTap: () {
@@ -357,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Center(
               child: GestureDetector(
                 onTap: () => _handleDebugTap(context, scope),
-                onLongPress: () => _showDebugSheet(context, scope),
+                onLongPress: kDebugMode ? () => _showDebugSheet(context, scope) : null,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     vertical: 8,
@@ -373,9 +384,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ],
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
   }
 
   Widget _buildMyReportCard(
@@ -419,12 +431,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Batal'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              scope.authService.logout();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Anda telah keluar dari akun.')),
-              );
+              await scope.authService.logout();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Anda telah keluar dari akun.')),
+                );
+              }
             },
             child: const Text('Keluar'),
           ),

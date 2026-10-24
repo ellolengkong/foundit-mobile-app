@@ -41,7 +41,7 @@ This roadmap assumes Flutter + Supabase Free only. Do not use FlutterFlow or Fir
 5. Create the restricted `public_reports` view and grant only the intended roles access to it. Apply least-privilege column grants to base tables.
 6. Create and test an `is_admin()` helper or equivalent secure admin check; implement admin-only moderation RPCs if used.
 7. Implement the authenticated `get_reporter_whatsapp_for_report(report_id)` function. It must check authentication, report visibility/status, not-self contact, and reporter opt-in.
-8. Create Supabase Storage bucket `report-photos`, public for intentionally public report images, restricted to JPEG/PNG/WebP and about 1 MB per object. Add Storage RLS policies so only authenticated owners can upload/replace objects in their user-ID folder; allow an admin to delete an object only through a role-checked admin policy for moderation.
+8. Create Supabase Storage bucket `report-photos`, public for intentionally public report images, restricted to JPEG/PNG/WebP and about 1 MB per object. Add Storage RLS policies so only authenticated owners can upload/replace objects in their report folder (`{report_id}/photo`); allow an admin to delete an object only through a role-checked admin policy for moderation.
 9. Verify public media limitations: anyone with a valid photo URL can read it, so do not upload private documents or sensitive IDs.
 10. Test table/view/function/Storage access with guest (`anon`), user A, user B, and admin.
 

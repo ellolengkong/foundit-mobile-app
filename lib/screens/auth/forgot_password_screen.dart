@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/services/auth_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../data/mock/foundit_scope.dart';
 import '../../widgets/primary_button.dart';
 
 /// Screen to request a password reset email.
@@ -23,18 +25,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _sendReset() {
+  Future<void> _sendReset() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _submitted = true;
-        });
-      }
-    });
+    try {
+      final scope = FoundItScope.of(context);
+      await scope.authService.sendPasswordResetEmail(
+        _emailController.text.trim(),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _submitted = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      final message = e is AuthFailure
+          ? e.message
+          : e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override

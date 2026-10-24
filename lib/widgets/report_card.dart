@@ -37,18 +37,36 @@ class ReportCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Photo placeholder ─────────────────────────────────────
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.image_outlined,
-                  color: AppColors.primary,
-                  size: 32,
+              // ── Photo thumbnail / placeholder ─────────────────────────
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: report.publicPhotoUrl != null
+                      ? Image.network(
+                          report.publicPhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Center(
+                            child: Icon(
+                              Icons.image_outlined,
+                              color: AppColors.primary,
+                              size: 32,
+                            ),
+                          ),
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.image_outlined,
+                            color: AppColors.primary,
+                            size: 32,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),

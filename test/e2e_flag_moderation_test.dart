@@ -188,7 +188,10 @@ void main() {
         await tester.tap(tampilkanFinder.first);
         await tester.pump();
 
-        expect(find.text('Laporan kini ditampilkan ke publik.'), findsOneWidget);
+        expect(
+          find.text('Laporan kini ditampilkan ke publik.'),
+          findsOneWidget,
+        );
         await tester.pumpAndSettle();
 
         // Verify report moderationStatus is visible again

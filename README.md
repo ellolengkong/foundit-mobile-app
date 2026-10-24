@@ -7,12 +7,13 @@ This folder contains the planning and implementation rules for the FoundIt Andro
 
 ## Source-of-truth files
 
-- `PRD.md` — product scope, features, and acceptance criteria.
-- `DATA_MODEL.md` — PostgreSQL tables, fixed values, access rules, contact lookup, and Storage decisions.
-- `UI_UX_DESIGN.md` — modern visual system, navigation, ASCII wireframes, and UI states.
-- `AGENTS.md` — persistent instructions for Antigravity.
-- `DEVELOPMENT_ROADMAP.md` — milestone-by-milestone development and testing plan.
-- `supabase/migrations/README.md` — notes for creating reviewed SQL migrations.
+- `md/PRD.md` — product scope, features, and acceptance criteria.
+- `md/DATA_MODEL.md` — PostgreSQL tables, fixed values, access rules, contact lookup, and Storage decisions.
+- `md/UI_UX_DESIGN.md` — modern visual system, navigation, ASCII wireframes, and UI states.
+- `md/AGENTS.md` — persistent instructions for Antigravity.
+- `md/DEVELOPMENT_ROADMAP.md` — milestone-by-milestone development and testing plan.
+- `md/M2A_DATABASE_GUIDE.md` — database schema, RLS, and Storage specifications.
+- `supabase/migrations/README.md` — notes for versioned SQL migrations.
 
 ## Current technical decisions
 
@@ -42,4 +43,4 @@ This folder contains the planning and implementation rules for the FoundIt Andro
 
 ## Documents are not migrations
 
-`DATA_MODEL.md` is the schema specification. The SQL migration has not been generated or tested yet. Create a migration under `supabase/migrations/`, review it carefully, and test all database and Storage policies with guest, user A, user B, and admin accounts before using real app data.
+`md/DATA_MODEL.md` is the schema specification. Versioned migrations have been prepared under `supabase/migrations/` and should be reviewed prior to CLI deployment.

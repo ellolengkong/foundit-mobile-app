@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/services/auth_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/mock/foundit_scope.dart';
 import '../../widgets/primary_button.dart';
@@ -35,30 +36,71 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _signUp() {
+  Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    final scope = FoundItScope.of(context);
-    scope.authService.signUp(
-      fullName: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      whatsapp: _phoneController.text.trim().isNotEmpty
-          ? _phoneController.text.trim()
-          : null,
-      allowWhatsappContact: _whatsappConsent,
-    );
+    try {
+      final scope = FoundItScope.of(context);
+      final result = await scope.authService.signUp(
+        fullName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        whatsapp: _phoneController.text.trim().isNotEmpty
+            ? _phoneController.text.trim()
+            : null,
+        allowWhatsappContact: _whatsappConsent,
+      );
 
-    setState(() => _isLoading = false);
-    Navigator.of(context).pop(true);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Akun berhasil dibuat dan Anda telah masuk.'),
-      ),
-    );
+      if (result.requiresEmailConfirmation) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Verifikasi Email Anda'),
+            content: Text(
+              'Pendaftaran berhasil! Tautan verifikasi telah dikirim ke ${_emailController.text.trim()}.\n\n'
+              'Silakan periksa kotak masuk (atau folder spam) email Anda dan lakukan konfirmasi sebelum masuk.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Mengerti'),
+              ),
+            ],
+          ),
+        );
+
+        if (mounted) {
+          Navigator.of(context).pop(false);
+        }
+      } else {
+        Navigator.of(context).pop(true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.message ?? 'Akun berhasil dibuat dan Anda telah masuk.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      final message = e is AuthFailure
+          ? e.message
+          : e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -140,6 +182,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     hintText: '081234567890',
                     prefixIcon: Icon(Icons.phone_outlined),
                   ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) return null;
+                    final digits = val.replaceAll(RegExp(r'\D'), '');
+                    if (digits.length < 10 || digits.length > 15) {
+                      return 'Nomor WhatsApp harus 10-15 digit angka.';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 

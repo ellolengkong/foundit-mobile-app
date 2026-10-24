@@ -1,33 +1,40 @@
-import 'package:flutter/foundation.dart';
-
+import '../../core/services/auth_service.dart';
 import '../models/user_profile.dart';
 
 /// Mock authentication service for M1 UI and workflow development.
 ///
 /// Supports guest state, simulated login, sign up, logout, and a mock admin
 /// mode toggle for testing admin features without real credentials.
-class MockAuthService extends ChangeNotifier {
+class MockAuthService extends AuthService {
   bool _isLoggedIn = false;
   UserProfile? _currentUser;
   bool _isAdminMode = false;
 
+  @override
   bool get isLoggedIn => _isLoggedIn;
+
+  @override
   UserProfile? get currentUser => _currentUser;
+
+  @override
   bool get isAdminMode => _isAdminMode;
 
   /// Whether current active session has admin privileges.
   /// In M1, this is active if [isAdminMode] is enabled or user role is admin.
+  @override
   bool get canAccessAdmin =>
       _isLoggedIn && (_isAdminMode || (_currentUser?.isAdmin ?? false));
 
   /// Logs into mock session.
-  void login({
+  @override
+  Future<void> login({
     required String email,
     required String password,
     String? userId,
   }) {
     _isLoggedIn = true;
-    final resolvedId = userId ??
+    final resolvedId =
+        userId ??
         (email.trim().startsWith('user-')
             ? email.trim().split('@').first
             : 'user-001');
@@ -42,10 +49,12 @@ class MockAuthService extends ChangeNotifier {
       updatedAt: DateTime.now().subtract(const Duration(days: 1)),
     );
     notifyListeners();
+    return Future.value();
   }
 
   /// Registers a new mock user and logs in.
-  void signUp({
+  @override
+  Future<AuthResult> signUp({
     required String fullName,
     required String email,
     required String password,
@@ -77,25 +86,36 @@ class MockAuthService extends ChangeNotifier {
       updatedAt: now,
     );
     notifyListeners();
+    return Future.value(
+      AuthResult(
+        requiresEmailConfirmation: false,
+        message: 'Akun berhasil dibuat dan Anda telah masuk.',
+        user: _currentUser,
+      ),
+    );
   }
 
   /// Logs out of mock session.
-  void logout() {
+  @override
+  Future<void> logout() {
     _isLoggedIn = false;
     _currentUser = null;
     _isAdminMode = false;
     notifyListeners();
+    return Future.value();
   }
 
   /// Toggles mock admin mode for testing.
   /// Per user rule: admin UI is only accessible through this mock toggle.
+  @override
   void toggleAdminMode() {
     _isAdminMode = !_isAdminMode;
     notifyListeners();
   }
 
   /// Updates profile details and contact settings.
-  void updateProfile({
+  @override
+  Future<void> updateProfile({
     required String fullName,
     String? whatsapp,
     bool? allowWhatsappContact,
@@ -125,5 +145,11 @@ class MockAuthService extends ChangeNotifier {
       );
       notifyListeners();
     }
+    return Future.value();
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) {
+    return Future.value();
   }
 }

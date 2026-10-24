@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/report_enums.dart';
+import '../../core/services/supabase_report_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/mock/foundit_scope.dart';
+import '../../data/mock/mock_flag_repository.dart';
 import '../../data/models/report.dart';
 import '../../data/models/report_flag.dart';
 import '../../widgets/empty_state.dart';
@@ -10,21 +12,72 @@ import '../../widgets/report_status_badge.dart';
 import '../../widgets/status_chip.dart';
 import '../home/report_detail_screen.dart';
 
-/// Admin moderation dashboard (Mock M1).
+/// Admin moderation dashboard.
 ///
-/// Only accessible when mock admin mode is active.
-class AdminDashboardScreen extends StatelessWidget {
+/// Guarded by [AuthService.canAccessAdmin]. Connects to Supabase RPCs:
+/// - [admin_set_report_moderation] for hiding/showing reports.
+/// - [admin_review_flag] for reviewing or dismissing abuse flags.
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    final scope = FoundItScope.of(context);
+    scope.flagRepository.refresh();
+    if (scope.repository is SupabaseReportRepository) {
+      await (scope.repository as SupabaseReportRepository).fetchAdminReports();
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    final scope = FoundItScope.of(context);
+    await scope.flagRepository.refresh();
+    if (scope.repository is SupabaseReportRepository) {
+      await (scope.repository as SupabaseReportRepository).fetchAdminReports();
+    } else {
+      await scope.repository.refresh();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final scope = FoundItScope.of(context);
 
+    // ── Security Check ────────────────────────────────────────────────────────
+    if (!scope.authService.canAccessAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Akses Ditolak')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Text(
+              'Anda tidak memiliki izin untuk mengakses Dashboard Admin.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final isMock = scope.flagRepository is MockFlagRepository;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Dashboard Admin (Mock)'),
+          title: Text(isMock ? 'Dashboard Admin (Mock)' : 'Dashboard Admin'),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Semua Laporan'),
@@ -45,20 +98,53 @@ class AdminDashboardScreen extends StatelessWidget {
                 .toList();
             final flags = scope.flagRepository.allFlags;
 
-            return TabBarView(
+            return Column(
               children: [
-                _buildReportList(
-                  context,
-                  scope,
-                  allReports,
-                  'Belum ada laporan',
-                ),
-                _buildFlaggedList(context, scope, flags),
-                _buildReportList(
-                  context,
-                  scope,
-                  hiddenReports,
-                  'Tidak ada laporan yang disembunyikan',
+                if (scope.flagRepository.isLoading)
+                  const LinearProgressIndicator(minHeight: 2),
+                if (scope.flagRepository.errorMessage != null)
+                  Container(
+                    width: double.infinity,
+                    color: AppColors.error.withValues(alpha: 0.12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      'Peringatan: ${scope.flagRepository.errorMessage}',
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      RefreshIndicator(
+                        onRefresh: _handleRefresh,
+                        child: _buildReportList(
+                          context,
+                          scope,
+                          allReports,
+                          'Belum ada laporan',
+                        ),
+                      ),
+                      RefreshIndicator(
+                        onRefresh: _handleRefresh,
+                        child: _buildFlaggedList(context, scope, flags),
+                      ),
+                      RefreshIndicator(
+                        onRefresh: _handleRefresh,
+                        child: _buildReportList(
+                          context,
+                          scope,
+                          hiddenReports,
+                          'Tidak ada laporan yang disembunyikan',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
@@ -74,16 +160,23 @@ class AdminDashboardScreen extends StatelessWidget {
     List<ReportFlag> flags,
   ) {
     if (flags.isEmpty) {
-      return const EmptyState(
-        icon: Icons.assignment_turned_in_outlined,
-        title: 'Tidak ada laporan yang dilaporkan',
-        subtitle: 'Tidak ada laporan yang ditandai bermasalah saat ini.',
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 100),
+          EmptyState(
+            icon: Icons.assignment_turned_in_outlined,
+            title: 'Tidak ada laporan yang dilaporkan',
+            subtitle: 'Tidak ada laporan yang ditandai bermasalah saat ini.',
+          ),
+        ],
       );
     }
 
     final textTheme = Theme.of(context).textTheme;
 
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: flags.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -189,39 +282,67 @@ class AdminDashboardScreen extends StatelessWidget {
                       ),
                     if (isOpen) ...[
                       OutlinedButton(
-                        onPressed: () {
-                          scope.flagRepository.dismissFlag(flag.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Laporan penyalahgunaan diabaikan.',
-                              ),
-                            ),
-                          );
+                        onPressed: () async {
+                          try {
+                            await scope.flagRepository.dismissFlag(flag.id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Laporan penyalahgunaan diabaikan.',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Gagal mengabaikan laporan: $e',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
                         },
                         child: const Text('Abaikan'),
                       ),
                       FilledButton.tonal(
-                        onPressed: () {
-                          if (report != null) {
-                            scope.repository.setModerationStatus(
-                              report.id,
-                              ModerationStatus.hidden,
-                            );
-                            scope.flagRepository.resolveFlagsForReport(
-                              report.id,
-                              status: FlagReviewStatus.reviewed,
-                            );
-                          } else {
-                            scope.flagRepository.reviewFlag(flag.id);
+                        onPressed: () async {
+                          try {
+                            if (report != null) {
+                              await scope.repository.setModerationStatus(
+                                report.id,
+                                ModerationStatus.hidden,
+                              );
+                              await scope.flagRepository.resolveFlagsForReport(
+                                report.id,
+                                status: FlagReviewStatus.reviewed,
+                              );
+                            } else {
+                              await scope.flagRepository.reviewFlag(flag.id);
+                            }
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Laporan disembunyikan dan flag ditandai selesai.',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Gagal memoderasi laporan: $e',
+                                  ),
+                                ),
+                              );
+                            }
                           }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Laporan disembunyikan dan flag ditandai selesai.',
-                              ),
-                            ),
-                          );
                         },
                         child: const Text('Sembunyikan & Selesai'),
                       ),
@@ -243,15 +364,22 @@ class AdminDashboardScreen extends StatelessWidget {
     String emptyMessage,
   ) {
     if (reports.isEmpty) {
-      return EmptyState(
-        icon: Icons.assignment_turned_in_outlined,
-        title: emptyMessage,
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 100),
+          EmptyState(
+            icon: Icons.assignment_turned_in_outlined,
+            title: emptyMessage,
+          ),
+        ],
       );
     }
 
     final textTheme = Theme.of(context).textTheme;
 
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: reports.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -324,39 +452,67 @@ class AdminDashboardScreen extends StatelessWidget {
                     ),
                     if (isHidden)
                       FilledButton.tonal(
-                        onPressed: () {
-                          scope.repository.setModerationStatus(
-                            r.id,
-                            ModerationStatus.visible,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Laporan kini ditampilkan ke publik.',
-                              ),
-                            ),
-                          );
+                        onPressed: () async {
+                          try {
+                            await scope.repository.setModerationStatus(
+                              r.id,
+                              ModerationStatus.visible,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Laporan kini ditampilkan ke publik.',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Gagal menampilkan laporan: $e',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
                         },
                         child: const Text('Tampilkan'),
                       )
                     else
                       OutlinedButton(
-                        onPressed: () {
-                          scope.repository.setModerationStatus(
-                            r.id,
-                            ModerationStatus.hidden,
-                          );
-                          scope.flagRepository.resolveFlagsForReport(
-                            r.id,
-                            status: FlagReviewStatus.reviewed,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Laporan disembunyikan dan flag terkait ditandai selesai.',
-                              ),
-                            ),
-                          );
+                        onPressed: () async {
+                          try {
+                            await scope.repository.setModerationStatus(
+                              r.id,
+                              ModerationStatus.hidden,
+                            );
+                            await scope.flagRepository.resolveFlagsForReport(
+                              r.id,
+                              status: FlagReviewStatus.reviewed,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Laporan disembunyikan dan flag terkait ditandai selesai.',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Gagal menyembunyikan laporan: $e',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
                         },
                         child: const Text('Sembunyikan'),
                       ),

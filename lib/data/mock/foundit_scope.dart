@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'mock_auth_service.dart';
-import 'mock_flag_repository.dart';
-import 'mock_report_repository.dart';
+import '../../core/services/auth_service.dart';
+import '../../core/services/flag_repository.dart';
+import '../../core/services/report_repository.dart';
 
-/// Provides [MockReportRepository], [MockAuthService], and [MockFlagRepository] down the widget tree.
+/// Provides [ReportRepository], [AuthService], and [FlagRepository] down the widget tree.
 class FoundItScope extends InheritedWidget {
   const FoundItScope({
     super.key,
@@ -14,9 +14,9 @@ class FoundItScope extends InheritedWidget {
     required super.child,
   });
 
-  final MockReportRepository repository;
-  final MockAuthService authService;
-  final MockFlagRepository flagRepository;
+  final ReportRepository repository;
+  final AuthService authService;
+  final FlagRepository flagRepository;
 
   static FoundItScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<FoundItScope>();
