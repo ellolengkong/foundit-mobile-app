@@ -105,189 +105,318 @@ class _HomeScreenState extends State<HomeScreen> {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-              // ── Header ────────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('FoundIt', style: textTheme.headlineLarge),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Lost Today, Found Tomorrow.',
-                        style: textTheme.bodySmall?.copyWith(
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ── Search ────────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: SearchField(
-                    controller: _searchController,
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    onFilterTap: _openFilterSheet,
-                  ),
-                ),
-              ),
-
-              // ── Type tabs ─────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: _TypeTabs(
-                    selected: _typeFilter,
-                    onSelected: (type) => setState(() => _typeFilter = type),
-                  ),
-                ),
-              ),
-
-              // ── Category chips ────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: CategoryChips(
-                    selectedKey: _categoryFilter,
-                    onSelected: (key) => setState(() => _categoryFilter = key),
-                  ),
-                ),
-              ),
-
-              // ── Active Location Filter Chip (if applied via FilterSheet) ──
-              if (hasLocationFilter)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                    child: Row(
-                      children: [
-                        Chip(
-                          avatar: const Icon(Icons.location_on, size: 16),
-                          label: Text(
-                            _buildingNameFilter != null &&
-                                    _buildingNameFilter!.isNotEmpty
-                                ? '$_campusAreaFilter · $_buildingNameFilter'
-                                : '$_campusAreaFilter',
-                            style: textTheme.labelSmall,
-                          ),
-                          onDeleted: _clearActiveExtraFilters,
-                          backgroundColor: AppColors.primarySoft,
-                          deleteIconColor: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // ── Active Date Filter Chip (if applied via FilterSheet) ──────
-              if (hasDateFilter)
+                // ── Branded welcome panel ────────────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    child: Row(
-                      children: [
-                        Chip(
-                          avatar: const Icon(Icons.date_range, size: 16),
-                          label: Text(
-                            _startDateFilter != null && _endDateFilter != null
-                                ? 'Tanggal: ${_startDateFilter!.day}/${_startDateFilter!.month} - ${_endDateFilter!.day}/${_endDateFilter!.month}'
-                                : 'Filter Tanggal Aktif',
-                            style: textTheme.labelSmall,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6666E8), Color(0xFF4545B8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(26),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.22),
+                            blurRadius: 22,
+                            offset: const Offset(0, 10),
                           ),
-                          onDeleted: () {
-                            setState(() {
-                              _startDateFilter = null;
-                              _endDateFilter = null;
-                            });
-                          },
-                          backgroundColor: AppColors.primarySoft,
-                          deleteIconColor: AppColors.primary,
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(26),
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              right: -30,
+                              top: -42,
+                              child: Container(
+                                width: 170,
+                                height: 170,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.07),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              right: 20,
+                              bottom: -55,
+                              child: Container(
+                                width: 135,
+                                height: 135,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.12),
+                                    width: 24,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 34,
+                                        height: 34,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.18,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            13,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.travel_explore_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'FoundIt',
+                                        style: textTheme.titleLarge?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 9,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.16,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'UNSRAT',
+                                          style: textTheme.labelSmall?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.6,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Temukan barangmu.',
+                                    style: textTheme.headlineSmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.12,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Lost Today, Found Tomorrow.',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.82,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Search ────────────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: SearchField(
+                      controller: _searchController,
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
+                      onFilterTap: _openFilterSheet,
+                    ),
+                  ),
+                ),
+
+                // ── Type tabs ─────────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: _TypeTabs(
+                      selected: _typeFilter,
+                      onSelected: (type) => setState(() => _typeFilter = type),
+                    ),
+                  ),
+                ),
+
+                // ── Category chips ────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: CategoryChips(
+                      selectedKey: _categoryFilter,
+                      onSelected: (key) =>
+                          setState(() => _categoryFilter = key),
+                    ),
+                  ),
+                ),
+
+                // ── Active Location Filter Chip (if applied via FilterSheet) ──
+                if (hasLocationFilter)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      child: Row(
+                        children: [
+                          Chip(
+                            avatar: const Icon(Icons.location_on, size: 16),
+                            label: Text(
+                              _buildingNameFilter != null &&
+                                      _buildingNameFilter!.isNotEmpty
+                                  ? '$_campusAreaFilter · $_buildingNameFilter'
+                                  : '$_campusAreaFilter',
+                              style: textTheme.labelSmall,
+                            ),
+                            onDeleted: _clearActiveExtraFilters,
+                            backgroundColor: AppColors.primarySoft,
+                            deleteIconColor: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // ── Active Date Filter Chip (if applied via FilterSheet) ──────
+                if (hasDateFilter)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                      child: Row(
+                        children: [
+                          Chip(
+                            avatar: const Icon(Icons.date_range, size: 16),
+                            label: Text(
+                              _startDateFilter != null && _endDateFilter != null
+                                  ? 'Tanggal: ${_startDateFilter!.day}/${_startDateFilter!.month} - ${_endDateFilter!.day}/${_endDateFilter!.month}'
+                                  : 'Filter Tanggal Aktif',
+                              style: textTheme.labelSmall,
+                            ),
+                            onDeleted: () {
+                              setState(() {
+                                _startDateFilter = null;
+                                _endDateFilter = null;
+                              });
+                            },
+                            backgroundColor: AppColors.primarySoft,
+                            deleteIconColor: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // ── Kemungkinan cocok teaser ───────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const MatchesScreen(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: _MatchesTeaser(textTheme: textTheme),
+                    ),
+                  ),
+                ),
+
+                // ── Section title ─────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Laporan Terbaru', style: textTheme.titleLarge),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${reports.length} laporan',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-              // ── Kemungkinan cocok teaser ───────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MatchesScreen(),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: _MatchesTeaser(textTheme: textTheme),
+                // ── Reports list or empty ─────────────────────────────────────
+                if (reports.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: EmptyState(
+                      icon: Icons.search_off,
+                      title: 'Tidak ada laporan ditemukan',
+                      subtitle: 'Coba ubah filter atau kata kunci pencarian.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                    sliver: SliverList.separated(
+                      itemCount: reports.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final report = reports[index];
+                        return ReportCard(
+                          report: report,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ReportDetailScreen(reportId: report.id),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ),
-
-              // ── Section title ─────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Laporan Terbaru', style: textTheme.titleLarge),
-                      Text(
-                        '${reports.length} laporan',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ── Reports list or empty ─────────────────────────────────────
-              if (reports.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: EmptyState(
-                    icon: Icons.search_off,
-                    title: 'Tidak ada laporan ditemukan',
-                    subtitle: 'Coba ubah filter atau kata kunci pencarian.',
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                  sliver: SliverList.separated(
-                    itemCount: reports.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final report = reports[index];
-                      return ReportCard(
-                        report: report,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  ReportDetailScreen(reportId: report.id),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
   }
 }
 

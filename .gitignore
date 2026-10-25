@@ -13,6 +13,7 @@
 migrate_working_dir/
 supabase/.temp/
 .env
+.env.json
 
 # IntelliJ related
 *.iml

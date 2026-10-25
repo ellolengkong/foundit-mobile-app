@@ -25,6 +25,15 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  void _showActionSnackBar(
+    ScaffoldMessengerState messenger,
+    SnackBar snackBar,
+  ) {
+    if (!messenger.mounted) return;
+    messenger.removeCurrentSnackBar();
+    messenger.showSnackBar(snackBar);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +44,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _loadData() async {
     final scope = FoundItScope.of(context);
-    scope.flagRepository.refresh();
+    if (!scope.authService.canAccessAdmin) return;
+
+    await scope.flagRepository.refresh();
     if (scope.repository is SupabaseReportRepository) {
       await (scope.repository as SupabaseReportRepository).fetchAdminReports();
     }
@@ -43,6 +54,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _handleRefresh() async {
     final scope = FoundItScope.of(context);
+    if (!scope.authService.canAccessAdmin) return;
+
     await scope.flagRepository.refresh();
     if (scope.repository is SupabaseReportRepository) {
       await (scope.repository as SupabaseReportRepository).fetchAdminReports();
@@ -283,33 +296,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     if (isOpen) ...[
                       OutlinedButton(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
                             await scope.flagRepository.dismissFlag(flag.id);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Laporan penyalahgunaan diabaikan.',
-                                  ),
+                            _showActionSnackBar(
+                              messenger,
+                              const SnackBar(
+                                content: Text(
+                                  'Laporan penyalahgunaan diabaikan.',
                                 ),
-                              );
-                            }
+                              ),
+                            );
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Gagal mengabaikan laporan: $e',
-                                  ),
-                                ),
-                              );
-                            }
+                            _showActionSnackBar(
+                              messenger,
+                              SnackBar(
+                                content: Text('Gagal mengabaikan laporan: $e'),
+                              ),
+                            );
                           }
                         },
                         child: const Text('Abaikan'),
                       ),
                       FilledButton.tonal(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
                             if (report != null) {
                               await scope.repository.setModerationStatus(
@@ -323,25 +334,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             } else {
                               await scope.flagRepository.reviewFlag(flag.id);
                             }
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Laporan disembunyikan dan flag ditandai selesai.',
-                                  ),
+                            _showActionSnackBar(
+                              messenger,
+                              const SnackBar(
+                                content: Text(
+                                  'Laporan disembunyikan dan flag ditandai selesai.',
                                 ),
-                              );
-                            }
+                              ),
+                            );
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Gagal memoderasi laporan: $e',
-                                  ),
-                                ),
-                              );
-                            }
+                            _showActionSnackBar(
+                              messenger,
+                              SnackBar(
+                                content: Text('Gagal memoderasi laporan: $e'),
+                              ),
+                            );
                           }
                         },
                         child: const Text('Sembunyikan & Selesai'),
@@ -453,30 +460,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     if (isHidden)
                       FilledButton.tonal(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
                             await scope.repository.setModerationStatus(
                               r.id,
                               ModerationStatus.visible,
                             );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Laporan kini ditampilkan ke publik.',
-                                  ),
+                            _showActionSnackBar(
+                              messenger,
+                              const SnackBar(
+                                content: Text(
+                                  'Laporan kini ditampilkan ke publik.',
                                 ),
-                              );
-                            }
+                              ),
+                            );
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Gagal menampilkan laporan: $e',
-                                  ),
-                                ),
-                              );
-                            }
+                            _showActionSnackBar(
+                              messenger,
+                              SnackBar(
+                                content: Text('Gagal menampilkan laporan: $e'),
+                              ),
+                            );
                           }
                         },
                         child: const Text('Tampilkan'),
@@ -484,6 +488,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     else
                       OutlinedButton(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
                             await scope.repository.setModerationStatus(
                               r.id,
@@ -493,25 +498,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               r.id,
                               status: FlagReviewStatus.reviewed,
                             );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Laporan disembunyikan dan flag terkait ditandai selesai.',
-                                  ),
+                            _showActionSnackBar(
+                              messenger,
+                              const SnackBar(
+                                content: Text(
+                                  'Laporan disembunyikan dan flag terkait ditandai selesai.',
                                 ),
-                              );
-                            }
+                              ),
+                            );
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Gagal menyembunyikan laporan: $e',
-                                  ),
+                            _showActionSnackBar(
+                              messenger,
+                              SnackBar(
+                                content: Text(
+                                  'Gagal menyembunyikan laporan: $e',
                                 ),
-                              );
-                            }
+                              ),
+                            );
                           }
                         },
                         child: const Text('Sembunyikan'),

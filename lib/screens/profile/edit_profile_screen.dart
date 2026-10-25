@@ -16,7 +16,6 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
-  late TextEditingController _phoneController;
   bool _whatsappOptIn = true;
   bool _isSaving = false;
 
@@ -25,16 +24,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.didChangeDependencies();
     final user = FoundItScope.of(context).authService.currentUser;
     _nameController = TextEditingController(text: user?.fullName ?? '');
-    _phoneController = TextEditingController(
-      text: user?.contact?.whatsappNumber ?? '',
-    );
     _whatsappOptIn = user?.contact?.allowWhatsappContact ?? false;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -47,9 +42,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final scope = FoundItScope.of(context);
       await scope.authService.updateProfile(
         fullName: _nameController.text.trim(),
-        whatsapp: _phoneController.text.trim().isNotEmpty
-            ? _phoneController.text.trim()
-            : null,
         allowWhatsappContact: _whatsappOptIn,
       );
 
@@ -67,10 +59,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ? e.message
           : e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppColors.error,
-        ),
+        SnackBar(content: Text(message), backgroundColor: AppColors.error),
       );
     }
   }
@@ -98,26 +87,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 validator: (val) {
                   if (val == null || val.trim().length < 2) {
                     return 'Nama minimal 2 karakter.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-
-              Text('Nomor WhatsApp', style: textTheme.labelLarge),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  hintText: '081234567890',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) return null;
-                  final digits = val.replaceAll(RegExp(r'\D'), '');
-                  if (digits.length < 10 || digits.length > 15) {
-                    return 'Nomor WhatsApp harus 10-15 digit angka.';
                   }
                   return null;
                 },

@@ -36,6 +36,7 @@ erDiagram
         uuid id PK
         text full_name
         text role
+        text account_type
         timestamptz created_at
         timestamptz updated_at
     }
@@ -86,21 +87,22 @@ One profile per Supabase Auth user, created by a database trigger after signup.
 | `id` | `uuid` | Yes | Primary key and FK to `auth.users.id`, `ON DELETE CASCADE`. |
 | `full_name` | `text` | Yes | Display name; recommended 2–80 characters. |
 | `role` | `text` | Yes | `user` or `admin`; default `user`; not editable by the app user. |
+| `account_type` | `text` | Yes | Informational member type selected at signup: `student` or `lecturer`; independent of authorization role. Existing accounts default to `student`. |
 | `created_at` | `timestamptz` | Yes | Default `now()`. |
 | `updated_at` | `timestamptz` | Yes | Updated on profile changes. |
 
-**Permissions:** user can read their own profile and update `full_name` only. The database trigger must always set role to `user`, ignoring any user-supplied role metadata. Admin changes are performed through a trusted Supabase Dashboard/SQL procedure. Use a secure helper such as `is_admin()` for RLS policies without causing recursive profile-policy checks.
+**Permissions:** user can read their own profile and update `full_name` only. The database trigger must always set role to `user`, ignoring any user-supplied role metadata; `account_type` is validated against the allowed member types and does not grant privileges. Admin changes are performed through a trusted Supabase Dashboard/SQL procedure. Use a secure helper such as `is_admin()` for RLS policies without causing recursive profile-policy checks.
 
 ### 4.2 `user_contacts` — private contact preference
 
 | Column | Type | Required | Rule / purpose |
 |---|---|---:|---|
 | `user_id` | `uuid` | Yes | Primary key and FK to `auth.users.id`, `ON DELETE CASCADE`. |
-| `whatsapp_number` | `text` | No | Store normalized international digits, e.g. `6281234567890`; validate before saving. |
+| `whatsapp_number` | `text` | Yes | Required during account registration; store normalized international digits, e.g. `6281234567890`. Nullable only for accounts created before this requirement. |
 | `allow_whatsapp_contact` | `boolean` | Yes | Default `false`; explicit opt-in to be contacted about reports. |
 | `updated_at` | `timestamptz` | Yes | Updated on changes. |
 
-**Permissions:** users can read/edit only their own contact record. Other users and guests cannot query this table. The app may call a database function named `get_reporter_whatsapp_for_report(report_id)` that returns a number only when all conditions hold: caller is authenticated; report exists, is `active` and `visible`; caller is not the report owner; target user has a number and opted in. Restrict function execution to `authenticated`, use a fixed safe `search_path`, schema-qualified table references, and `SECURITY DEFINER` only if needed to read protected contact data. Do not grant direct select on other users' contact rows.
+**Permissions:** users can read their own contact record and change only the contact preference; the phone number is collected during registration and cannot be inserted or updated directly by an authenticated client. Other users and guests cannot query this table. The app may call a database function named `get_reporter_whatsapp_for_report(report_id)` that returns a number only when all conditions hold: caller is authenticated; report exists, is `active` and `visible`; caller is not the report owner; target user has a number and opted in. Restrict function execution to `authenticated`, use a fixed safe `search_path`, schema-qualified table references, and `SECURITY DEFINER` only if needed to read protected contact data. Do not grant direct select on other users' contact rows.
 
 ### 4.3 `reports` — lost/found reports
 

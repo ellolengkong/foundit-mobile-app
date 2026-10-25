@@ -13,10 +13,7 @@ import 'supabase_service.dart';
 /// - Database RPC `public.admin_review_flag(p_flag_id, p_review_status)` for
 ///   moderating flag review status as verified admin.
 class SupabaseFlagRepository extends FlagRepository {
-  SupabaseFlagRepository({SupabaseClient? client})
-      : _customClient = client {
-    refresh();
-  }
+  SupabaseFlagRepository({SupabaseClient? client}) : _customClient = client;
 
   final SupabaseClient? _customClient;
   SupabaseClient get _client => _customClient ?? SupabaseService.client;
@@ -108,10 +105,10 @@ class SupabaseFlagRepository extends FlagRepository {
   @override
   Future<void> dismissFlag(String flagId) async {
     try {
-      await _client.rpc('admin_review_flag', params: {
-        'p_flag_id': flagId,
-        'p_review_status': 'dismissed',
-      });
+      await _client.rpc(
+        'admin_review_flag',
+        params: {'p_flag_id': flagId, 'p_review_status': 'dismissed'},
+      );
 
       final idx = _flags.indexWhere((f) => f.id == flagId);
       if (idx != -1) {
@@ -129,10 +126,10 @@ class SupabaseFlagRepository extends FlagRepository {
   @override
   Future<void> reviewFlag(String flagId) async {
     try {
-      await _client.rpc('admin_review_flag', params: {
-        'p_flag_id': flagId,
-        'p_review_status': 'reviewed',
-      });
+      await _client.rpc(
+        'admin_review_flag',
+        params: {'p_flag_id': flagId, 'p_review_status': 'reviewed'},
+      );
 
       final idx = _flags.indexWhere((f) => f.id == flagId);
       if (idx != -1) {
@@ -155,17 +152,16 @@ class SupabaseFlagRepository extends FlagRepository {
     final targets = _flags
         .where(
           (f) =>
-              f.reportId == reportId &&
-              f.reviewStatus == FlagReviewStatus.open,
+              f.reportId == reportId && f.reviewStatus == FlagReviewStatus.open,
         )
         .toList();
 
     for (final flag in targets) {
       try {
-        await _client.rpc('admin_review_flag', params: {
-          'p_flag_id': flag.id,
-          'p_review_status': status.key,
-        });
+        await _client.rpc(
+          'admin_review_flag',
+          params: {'p_flag_id': flag.id, 'p_review_status': status.key},
+        );
 
         final idx = _flags.indexWhere((f) => f.id == flag.id);
         if (idx != -1) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/categories.dart';
 import '../../core/constants/locations.dart';
@@ -7,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../data/mock/foundit_scope.dart';
 import '../../data/models/report.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/report_photo_viewer.dart';
 import '../../widgets/report_status_badge.dart';
 import '../../widgets/status_chip.dart';
 import '../auth/login_screen.dart';
@@ -40,7 +42,8 @@ class ReportDetailScreen extends StatelessWidget {
         }
 
         final currentUser = scope.authService.currentUser;
-        final isOwner = currentUser != null &&
+        final isOwner =
+            currentUser != null &&
             (currentUser.id == report.ownerId ||
                 scope.repository.isUserReportOwner(report.id, currentUser.id));
         final categoryLabel =
@@ -67,13 +70,9 @@ class ReportDetailScreen extends StatelessWidget {
                   height: 220,
                   color: AppColors.primarySoft,
                   child: report.publicPhotoUrl != null
-                      ? Image.network(
-                          report.publicPhotoUrl!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
+                      ? ReportPhotoViewer(
+                          imageUrl: report.publicPhotoUrl!,
                           height: 220,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildPhotoFallback(report, textTheme),
                         )
                       : _buildPhotoFallback(report, textTheme),
                 ),
@@ -264,7 +263,9 @@ class ReportDetailScreen extends StatelessWidget {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Laporan diaktifkan kembali.'),
+                                    content: Text(
+                                      'Laporan diaktifkan kembali.',
+                                    ),
                                   ),
                                 );
                               }
@@ -308,7 +309,7 @@ class ReportDetailScreen extends StatelessWidget {
                           label: 'Hubungi via WhatsApp',
                           icon: Icons.chat_outlined,
                           onPressed: () =>
-                              _handleWhatsAppContact(context, scope),
+                              _handleWhatsAppContact(context, scope, report),
                         ),
                       ],
                     ],
@@ -392,7 +393,11 @@ class ReportDetailScreen extends StatelessWidget {
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
-  void _handleWhatsAppContact(BuildContext context, FoundItScope scope) {
+  Future<void> _handleWhatsAppContact(
+    BuildContext context,
+    FoundItScope scope,
+    Report report,
+  ) async {
     if (!scope.authService.isLoggedIn) {
       showDialog(
         context: context,
@@ -418,22 +423,56 @@ class ReportDetailScreen extends StatelessWidget {
           ],
         ),
       );
-    } else {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Kontak WhatsApp (Mock M1)'),
-          content: const Text(
-            'Pada versi MVP lengkap (M7), tombol ini akan membuka WhatsApp pemilik setelah diverifikasi opt-in kontak.\n\nNomor pelapor dilindungi privasi sesuai kebijakan UNSRAT.',
+      return;
+    }
+
+    if (!report.isPubliclyVisible) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Kontak hanya tersedia untuk laporan aktif dan terlihat.',
           ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Mengerti'),
-            ),
-          ],
         ),
       );
+      return;
+    }
+
+    try {
+      final phone = await scope.authService.requestReporterWhatsapp(report.id);
+      if (!context.mounted) return;
+      if (phone == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Nomor WhatsApp tidak tersedia atau pemilik belum mengizinkan kontak.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final normalizedPhone = phone.replaceAll(RegExp(r'\D'), '');
+      if (normalizedPhone.length < 10 || normalizedPhone.length > 15) {
+        throw const FormatException(
+          'Nomor WhatsApp yang diterima tidak valid.',
+        );
+      }
+
+      final message =
+          'Halo, saya melihat laporan "${report.itemName}" di FoundIt UNSRAT. '
+          'Apakah barang ini masih tersedia untuk diverifikasi?';
+      final uri = Uri.https('wa.me', '/$normalizedPhone', {'text': message});
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw StateError('Perangkat tidak dapat membuka tautan WhatsApp.');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Gagal membuka WhatsApp: $e')));
     }
   }
 
@@ -496,7 +535,8 @@ class ReportDetailScreen extends StatelessWidget {
 
     if (currentUserId == null) return;
 
-    final isOwner = currentUserId == report.ownerId ||
+    final isOwner =
+        currentUserId == report.ownerId ||
         scope.repository.isUserReportOwner(report.id, currentUserId);
 
     if (isOwner) {
@@ -632,11 +672,7 @@ class ReportDetailScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.image_outlined,
-            size: 56,
-            color: AppColors.primary,
-          ),
+          const Icon(Icons.image_outlined, size: 56, color: AppColors.primary),
           const SizedBox(height: 8),
           Text(
             'Foto Barang',

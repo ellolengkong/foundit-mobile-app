@@ -37,12 +37,28 @@ class UserContact {
 ///
 /// Mirrors the `profiles` table. Role is always `user` for normal accounts
 /// and can only be changed to `admin` through trusted server-side operations.
+enum AccountType {
+  student('student', 'Mahasiswa'),
+  lecturer('lecturer', 'Dosen');
+
+  const AccountType(this.key, this.label);
+
+  final String key;
+  final String label;
+
+  static AccountType fromKey(String? key) => switch (key) {
+    'lecturer' => AccountType.lecturer,
+    _ => AccountType.student,
+  };
+}
+
 class UserProfile {
   const UserProfile({
     required this.id,
     required this.fullName,
     this.email,
     this.role = 'user',
+    this.accountType = AccountType.student,
     this.contact,
     required this.createdAt,
     required this.updatedAt,
@@ -60,6 +76,9 @@ class UserProfile {
   /// `user` or `admin`. Default `user`; never set by the client.
   final String role;
 
+  /// Informational member type selected during registration.
+  final AccountType accountType;
+
   /// Optional private contact details from `user_contacts`.
   final UserContact? contact;
 
@@ -73,6 +92,7 @@ class UserProfile {
     String? fullName,
     String? email,
     String? role,
+    AccountType? accountType,
     UserContact? contact,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -82,6 +102,7 @@ class UserProfile {
       fullName: fullName ?? this.fullName,
       email: email ?? this.email,
       role: role ?? this.role,
+      accountType: accountType ?? this.accountType,
       contact: contact ?? this.contact,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

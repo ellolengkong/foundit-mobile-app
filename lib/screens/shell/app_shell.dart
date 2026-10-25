@@ -91,16 +91,16 @@ class _AppShellState extends State<AppShell> {
       floatingActionButton: FloatingActionButton(
         onPressed: _onFabPressed,
         tooltip: 'Lapor Barang',
-        elevation: 3,
-        child: const Icon(Icons.add, size: 28),
+        elevation: 4,
+        child: const Icon(Icons.add, size: 30),
       ),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
+        notchMargin: 9,
         color: AppColors.surface,
-        elevation: 4,
+        elevation: 8,
         child: SizedBox(
-          height: 60,
+          height: 66,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -135,21 +135,26 @@ class _AppShellState extends State<AppShell> {
 
     return InkWell(
       onTap: () => setState(() => _currentIndex = index),
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: Column(
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primarySoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(isSelected ? activeIcon : icon, color: color, size: 24),
-            const SizedBox(height: 2),
+            Icon(isSelected ? activeIcon : icon, color: color, size: 21),
+            const SizedBox(width: 7),
             Text(
               label,
               style: TextStyle(
                 color: color,
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],

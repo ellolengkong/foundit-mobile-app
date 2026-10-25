@@ -47,6 +47,15 @@ abstract class AuthService extends ChangeNotifier {
   /// Whether the current user has admin access (via database role or mock toggle).
   bool get canAccessAdmin;
 
+  /// Whether the active account's email address has been verified.
+  bool get isEmailVerified;
+
+  /// Whether the active session was opened from a password-recovery link.
+  bool get isPasswordRecovery;
+
+  /// User-facing error when a password-recovery link cannot be verified.
+  String? get passwordRecoveryError;
+
   /// Signs in an existing user with email and password.
   Future<void> login({
     required String email,
@@ -59,7 +68,8 @@ abstract class AuthService extends ChangeNotifier {
     required String fullName,
     required String email,
     required String password,
-    String? whatsapp,
+    required String whatsapp,
+    AccountType accountType = AccountType.student,
     bool allowWhatsappContact = false,
   });
 
@@ -69,12 +79,24 @@ abstract class AuthService extends ChangeNotifier {
   /// Updates full name and optional contact preferences for the active user.
   Future<void> updateProfile({
     required String fullName,
-    String? whatsapp,
     bool? allowWhatsappContact,
   });
 
   /// Sends a password reset email to the specified address.
   Future<void> sendPasswordResetEmail(String email);
+
+  /// Sets a new password for the active password-recovery session.
+  Future<void> updatePassword(String password);
+
+  /// Deletes the active account after verifying the user's password.
+  Future<void> deleteAccount({required String password});
+
+  /// Leaves the password-recovery flow after the user confirms completion.
+  void completePasswordRecovery();
+
+  /// Requests another report owner's WhatsApp number through a
+  /// permission-checked backend operation.
+  Future<String?> requestReporterWhatsapp(String reportId);
 
   /// Toggles admin mode for testing/development.
   void toggleAdminMode();

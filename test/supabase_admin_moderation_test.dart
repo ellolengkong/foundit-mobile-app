@@ -40,7 +40,8 @@ void main() {
         reporterId: 'user-001',
         reason: FlagReason.spam,
         details: 'Spam berulang kali',
-        reviewStatus: FlagReviewStatus.reviewed, // Must be omitted (DB default is 'open')
+        reviewStatus:
+            FlagReviewStatus.reviewed, // Must be omitted (DB default is 'open')
         createdAt: DateTime.now(), // Must be omitted (DB default is now())
       );
 
@@ -69,7 +70,13 @@ void main() {
       expect(FlagReviewStatus.dismissed.key, 'dismissed');
 
       // Reason enum check in report_flags table
-      final validReasons = ['spam', 'false_information', 'inappropriate', 'personal_data', 'other'];
+      final validReasons = [
+        'spam',
+        'false_information',
+        'inappropriate',
+        'personal_data',
+        'other',
+      ];
       for (final reason in FlagReason.values) {
         expect(validReasons.contains(reason.key), isTrue);
       }
@@ -95,7 +102,9 @@ void main() {
       );
       expect(success, isTrue);
 
-      final submitted = repo.allFlags.firstWhere((f) => f.reportId == 'rep-test-99');
+      final submitted = repo.allFlags.firstWhere(
+        (f) => f.reportId == 'rep-test-99',
+      );
       expect(submitted.reason, FlagReason.inappropriate);
       expect(submitted.reviewStatus, FlagReviewStatus.open);
 
@@ -121,7 +130,10 @@ void main() {
       );
       expect(repo.openFlags.any((f) => f.reportId == 'rep-bulk-test'), isTrue);
 
-      await repo.resolveFlagsForReport('rep-bulk-test', status: FlagReviewStatus.reviewed);
+      await repo.resolveFlagsForReport(
+        'rep-bulk-test',
+        status: FlagReviewStatus.reviewed,
+      );
       expect(repo.openFlags.any((f) => f.reportId == 'rep-bulk-test'), isFalse);
     });
   });
@@ -130,7 +142,7 @@ void main() {
     testWidgets('Blocks non-admin user with Akses Ditolak', (tester) async {
       final auth = MockAuthService(); // Default: not admin
       final reportRepo = MockReportRepository();
-      final flagRepo = MockFlagRepository();
+      final flagRepo = _CountingFlagRepository();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -150,14 +162,20 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Semua Laporan'), findsNothing);
+      expect(flagRepo.refreshCount, 0);
     });
 
-    testWidgets('Allows admin access and renders moderation tabs', (tester) async {
+    testWidgets('Allows admin access and renders moderation tabs', (
+      tester,
+    ) async {
       final auth = MockAuthService();
-      await auth.login(email: 'admin@test.com', password: 'password'); // must be logged in
+      await auth.login(
+        email: 'admin@test.com',
+        password: 'password',
+      ); // must be logged in
       auth.toggleAdminMode(); // Activate admin mode
       final reportRepo = MockReportRepository();
-      final flagRepo = MockFlagRepository();
+      final flagRepo = _CountingFlagRepository();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -175,6 +193,7 @@ void main() {
       expect(find.text('Semua Laporan'), findsOneWidget);
       expect(find.text('Dilaporkan'), findsOneWidget);
       expect(find.text('Disembunyikan'), findsOneWidget);
+      expect(flagRepo.refreshCount, 1);
     });
   });
 
@@ -195,25 +214,31 @@ void main() {
       expect(auth.canAccessAdmin, isFalse);
     });
 
-    test('MockAuthService: logged-in user without toggle cannot access admin', () async {
-      final auth = MockAuthService();
-      await auth.login(email: 'user@test.com', password: 'password');
+    test(
+      'MockAuthService: logged-in user without toggle cannot access admin',
+      () async {
+        final auth = MockAuthService();
+        await auth.login(email: 'user@test.com', password: 'password');
 
-      expect(auth.isLoggedIn, isTrue);
-      expect(auth.isAdminMode, isFalse);
-      // role='user' in mock login, isAdmin=false
-      expect(auth.currentUser?.isAdmin, isFalse);
-      expect(auth.canAccessAdmin, isFalse);
-    });
+        expect(auth.isLoggedIn, isTrue);
+        expect(auth.isAdminMode, isFalse);
+        // role='user' in mock login, isAdmin=false
+        expect(auth.currentUser?.isAdmin, isFalse);
+        expect(auth.canAccessAdmin, isFalse);
+      },
+    );
 
-    test('MockAuthService: toggleAdminMode grants mock access when logged in', () async {
-      final auth = MockAuthService();
-      await auth.login(email: 'user@test.com', password: 'password');
+    test(
+      'MockAuthService: toggleAdminMode grants mock access when logged in',
+      () async {
+        final auth = MockAuthService();
+        await auth.login(email: 'user@test.com', password: 'password');
 
-      auth.toggleAdminMode();
-      expect(auth.isAdminMode, isTrue);
-      expect(auth.canAccessAdmin, isTrue); // Mock only — prototype testing
-    });
+        auth.toggleAdminMode();
+        expect(auth.isAdminMode, isTrue);
+        expect(auth.canAccessAdmin, isTrue); // Mock only — prototype testing
+      },
+    );
 
     test('MockAuthService: logout resets admin mode', () async {
       final auth = MockAuthService();
@@ -227,31 +252,39 @@ void main() {
       expect(auth.canAccessAdmin, isFalse);
     });
 
-    test('MockAuthService: toggleAdminMode toggle off removes access', () async {
-      final auth = MockAuthService();
-      await auth.login(email: 'user@test.com', password: 'password');
+    test(
+      'MockAuthService: toggleAdminMode toggle off removes access',
+      () async {
+        final auth = MockAuthService();
+        await auth.login(email: 'user@test.com', password: 'password');
 
-      auth.toggleAdminMode(); // ON
-      expect(auth.canAccessAdmin, isTrue);
+        auth.toggleAdminMode(); // ON
+        expect(auth.canAccessAdmin, isTrue);
 
-      auth.toggleAdminMode(); // OFF
-      expect(auth.canAccessAdmin, isFalse);
-    });
+        auth.toggleAdminMode(); // OFF
+        expect(auth.canAccessAdmin, isFalse);
+      },
+    );
 
-    test('canAccessAdmin requires both isLoggedIn AND database admin role', () async {
-      final auth = MockAuthService();
-      // Not logged in — even if we somehow had isAdminMode=true, gate fails
-      expect(auth.canAccessAdmin, isFalse);
+    test(
+      'canAccessAdmin requires both isLoggedIn AND database admin role',
+      () async {
+        final auth = MockAuthService();
+        // Not logged in — even if we somehow had isAdminMode=true, gate fails
+        expect(auth.canAccessAdmin, isFalse);
 
-      // Log in as regular user
-      await auth.login(email: 'user@test.com', password: 'password');
-      expect(auth.currentUser?.isAdmin, isFalse);
-      expect(auth.canAccessAdmin, isFalse);
-    });
+        // Log in as regular user
+        await auth.login(email: 'user@test.com', password: 'password');
+        expect(auth.currentUser?.isAdmin, isFalse);
+        expect(auth.canAccessAdmin, isFalse);
+      },
+    );
 
     // Widget test: verify that a user who IS logged in but NOT admin
     // sees "Akses Ditolak" even when they somehow reach AdminDashboardScreen
-    testWidgets('Logged-in non-admin user blocked by dashboard guard', (tester) async {
+    testWidgets('Logged-in non-admin user blocked by dashboard guard', (
+      tester,
+    ) async {
       final auth = MockAuthService();
       await auth.login(email: 'regular@test.com', password: 'pw');
       // Do NOT toggle admin mode — simulates a non-admin in production
@@ -277,4 +310,14 @@ void main() {
       expect(find.text('Dilaporkan'), findsNothing);
     });
   });
+}
+
+class _CountingFlagRepository extends MockFlagRepository {
+  int refreshCount = 0;
+
+  @override
+  Future<void> refresh() async {
+    refreshCount++;
+    await super.refresh();
+  }
 }

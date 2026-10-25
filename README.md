@@ -21,7 +21,13 @@ This folder contains the planning and implementation rules for the FoundIt Andro
 - Backend: Supabase Auth + PostgreSQL + Supabase Storage.
 - Photo bucket: `report-photos`, intended for public report images, with upload/delete restricted by Storage policies.
 - WhatsApp integration: `url_launcher` and an authenticated Supabase database function for contact lookup.
+- Supabase credentials are supplied at run/build time with `SUPABASE_URL` and `SUPABASE_ANON_KEY`. If both are omitted, the app starts with in-memory mock services; supplying only one is a configuration error.
+- Android password recovery redirects to `com.example.foundit://reset-password`. Add this exact URI to Supabase Auth's allowed redirect URLs. If the Android `applicationId` changes, update the URI in `SupabaseAuthService.passwordRecoveryRedirect`, the Android manifest intent filter, and Supabase Auth URL Configuration together.
 - No Firebase, FlutterFlow, Cloudinary, paid services, internal chat, push notifications, GPS/maps, or AI image recognition in MVP.
+
+Apply the versioned Supabase migrations before using the backend. The WhatsApp contact flow requires `20261025000000_reporter_whatsapp_rpc.sql` in addition to the schema, RLS, and Storage migrations. See `md/M2A_DATABASE_GUIDE.md` for the CLI workflow.
+
+For Android password recovery, add `com.example.foundit://reset-password` under **Supabase Dashboard → Authentication → URL Configuration → Redirect URLs**. The email link opens the app, where the user enters and confirms a new password. This URI uses the current Android application ID and must be updated in the Android manifest, `SupabaseAuthService.passwordRecoveryRedirect`, and Supabase Auth settings together if that ID changes.
 
 ## Recommended start order
 

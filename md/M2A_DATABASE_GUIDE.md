@@ -12,6 +12,7 @@ Migrations follow the Supabase CLI timestamp naming convention:
 | `supabase/migrations/20261024045913_schema.sql` | Tables, constraints, indexes, triggers, helper functions (`is_admin()`), and `public_reports` view |
 | `supabase/migrations/20261024050151_rls_policies.sql` | RLS enable, column-level least-privilege grants, row-level policies, and admin moderation RPCs |
 | `supabase/migrations/20261024050328_storage.sql` | `report-photos` bucket creation and folder-scoped Storage RLS policies |
+| `supabase/migrations/20261025000000_reporter_whatsapp_rpc.sql` | Permission-checked RPC for requesting an opted-in reporter's WhatsApp number |
 
 Migrations must be applied **in order** by the Supabase CLI, which executes them chronologically based on timestamps.
 
@@ -73,6 +74,20 @@ supabase migration up
 | `get_reporter_whatsapp_for_report(uuid)` | RPC | Returns WhatsApp number if caller authenticated, report active+visible, caller not owner, and owner opted in. `SECURITY DEFINER`. |
 | `admin_set_report_moderation(uuid, text)` | RPC | Admin-only: set report moderation_status to visible/hidden. |
 | `admin_review_flag(uuid, text)` | RPC | Admin-only: update flag review_status to open/reviewed/dismissed. |
+
+### Account deletion Edge Function
+
+Deploy `supabase/functions/delete-account` with:
+
+```bash
+supabase functions deploy delete-account
+```
+
+The function validates the session and verifies the submitted account password
+with Supabase Auth before removing the user's report photos from Storage and
+deleting the Auth user with the server-only service role key. Foreign-key
+cascades remove the profile, contact, reports, and related report flags. Never
+add the service role key to the Flutter application.
 
 ### Triggers
 

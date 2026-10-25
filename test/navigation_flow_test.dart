@@ -44,10 +44,11 @@ void main() {
 
         // Verify LoginScreen is shown
         expect(find.text('Masuk ke FoundIt'), findsOneWidget);
+        expect(find.text('Email Kampus / Pribadi *'), findsOneWidget);
 
         // Fill credentials
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'nama@unsrat.ac.id'),
+          find.widgetWithText(TextFormField, 'Email Anda'),
           'test@unsrat.ac.id',
         );
         await tester.enterText(
@@ -92,8 +93,12 @@ void main() {
           'Budi Santoso',
         );
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'nama@unsrat.ac.id'),
+          find.widgetWithText(TextFormField, 'Email Anda'),
           'budi@unsrat.ac.id',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nomor Whatsapp Anda'),
+          '081234567890',
         );
         await tester.enterText(
           find.widgetWithText(TextFormField, 'Minimal 6 karakter'),
@@ -130,6 +135,7 @@ void main() {
 
       // In guest state, user sees guest notice
       expect(find.text('Anda Masuk sebagai Tamu'), findsOneWidget);
+      expect(find.text('Bergabung dan lakukan lebih banyak'), findsOneWidget);
 
       // Tap Beranda tab
       await tester.tap(find.text('Beranda'));
@@ -148,7 +154,9 @@ void main() {
       final firstReport = repo.getPublicReports().first;
 
       // Find and tap the first report card item
-      await tester.tap(find.text(firstReport.itemName).first);
+      final firstReportFinder = find.text(firstReport.itemName).first;
+      await tester.ensureVisible(firstReportFinder);
+      await tester.tap(firstReportFinder);
       await tester.pumpAndSettle();
 
       // Detail screen has title 'Detail Laporan' and description section

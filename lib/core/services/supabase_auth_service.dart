@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/models/user_profile.dart';
+import '../utils/whatsapp_number.dart';
 import 'auth_service.dart';
 import 'supabase_service.dart';
 
@@ -24,6 +25,11 @@ class SupabaseAuthService extends AuthService {
   bool _isLoggedIn = false;
   UserProfile? _currentUser;
   bool _isAdminMode = false;
+  bool _isPasswordRecovery = false;
+  String? _passwordRecoveryError;
+
+  static const passwordRecoveryRedirect =
+      'com.example.foundit://reset-password';
 
   @override
   bool get isLoggedIn => _isLoggedIn;
@@ -35,8 +41,17 @@ class SupabaseAuthService extends AuthService {
   bool get isAdminMode => _isAdminMode;
 
   @override
-  bool get canAccessAdmin =>
-      _isLoggedIn && (_currentUser?.isAdmin ?? false);
+  bool get canAccessAdmin => _isLoggedIn && (_currentUser?.isAdmin ?? false);
+
+  @override
+  bool get isEmailVerified =>
+      _client.auth.currentUser?.emailConfirmedAt != null;
+
+  @override
+  bool get isPasswordRecovery => _isPasswordRecovery;
+
+  @override
+  String? get passwordRecoveryError => _passwordRecoveryError;
 
   void _init() {
     final currentSession = _client.auth.currentSession;
@@ -44,16 +59,49 @@ class SupabaseAuthService extends AuthService {
       _loadUserProfile(currentSession.user);
     }
 
-    _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
-      final session = data.session;
-      if (session != null) {
-        await _loadUserProfile(session.user);
-      } else {
-        _currentUser = null;
-        _isLoggedIn = false;
-        notifyListeners();
-      }
-    });
+    _authSubscription = _client.auth.onAuthStateChange.listen(
+      (data) async {
+        if (data.event == AuthChangeEvent.passwordRecovery) {
+          _isPasswordRecovery = true;
+          _isLoggedIn = data.session != null;
+          _passwordRecoveryError = null;
+          notifyListeners();
+        } else if (data.event == AuthChangeEvent.signedIn ||
+            data.event == AuthChangeEvent.signedOut) {
+          _isPasswordRecovery = false;
+          _passwordRecoveryError = null;
+        }
+
+        final session = data.session;
+        if (session != null) {
+          await _loadUserProfile(session.user);
+        } else {
+          _currentUser = null;
+          _isLoggedIn = false;
+          _isPasswordRecovery = false;
+          _passwordRecoveryError = null;
+          notifyListeners();
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (error is AuthException) {
+          _isPasswordRecovery = false;
+          _passwordRecoveryError = error.statusCode == 'otp_expired'
+              ? 'Tautan reset sudah kedaluwarsa atau pernah digunakan. Minta tautan baru dan buka tautan terbaru satu kali saja.'
+              : 'Tautan reset tidak dapat diverifikasi. Minta tautan reset baru lalu buka dari email terbaru.';
+          notifyListeners();
+          return;
+        }
+
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'Supabase authentication',
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -67,13 +115,15 @@ class SupabaseAuthService extends AuthService {
     try {
       final profileRes = await _client
           .from('profiles')
-          .select('id, full_name, role, created_at, updated_at')
+          .select('id, full_name, role, account_type, created_at, updated_at')
           .eq('id', user.id)
           .maybeSingle();
 
       final contactRes = await _client
           .from('user_contacts')
-          .select('user_id, whatsapp_number, allow_whatsapp_contact, updated_at')
+          .select(
+            'user_id, whatsapp_number, allow_whatsapp_contact, updated_at',
+          )
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -99,6 +149,9 @@ class SupabaseAuthService extends AuthService {
               : (user.userMetadata?['full_name'] as String? ?? 'Pengguna'),
           email: user.email,
           role: profileRes['role'] as String? ?? 'user',
+          accountType: AccountType.fromKey(
+            profileRes['account_type'] as String?,
+          ),
           contact: contact,
           createdAt:
               DateTime.tryParse(profileRes['created_at'] as String? ?? '') ??
@@ -110,10 +163,12 @@ class SupabaseAuthService extends AuthService {
       } else {
         _currentUser = UserProfile(
           id: user.id,
-          fullName:
-              (user.userMetadata?['full_name'] as String?) ?? 'Pengguna',
+          fullName: (user.userMetadata?['full_name'] as String?) ?? 'Pengguna',
           email: user.email,
           role: 'user',
+          accountType: AccountType.fromKey(
+            user.userMetadata?['account_type'] as String?,
+          ),
           contact: contact,
           createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
           updatedAt: DateTime.now(),
@@ -124,10 +179,12 @@ class SupabaseAuthService extends AuthService {
     } catch (_) {
       _currentUser = UserProfile(
         id: user.id,
-        fullName:
-            (user.userMetadata?['full_name'] as String?) ?? 'Pengguna',
+        fullName: (user.userMetadata?['full_name'] as String?) ?? 'Pengguna',
         email: user.email,
         role: 'user',
+        accountType: AccountType.fromKey(
+          user.userMetadata?['account_type'] as String?,
+        ),
         contact: null,
         createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
         updatedAt: DateTime.now(),
@@ -167,18 +224,29 @@ class SupabaseAuthService extends AuthService {
     required String fullName,
     required String email,
     required String password,
-    String? whatsapp,
+    required String whatsapp,
+    AccountType accountType = AccountType.student,
     bool allowWhatsappContact = false,
   }) async {
+    final normalized = normalizeWhatsapp(whatsapp);
+    if (normalized == null) {
+      throw const AuthFailure(
+        'Nomor WhatsApp wajib diisi dengan 10-15 digit yang valid.',
+      );
+    }
+
     try {
       // 1. Register with Supabase Auth
       // The on_auth_user_created trigger on auth.users will insert public.profiles
-      // automatically using raw_user_meta_data ->> 'full_name' with role='user'.
+      // and the private contact row using the signup metadata.
       final response = await _client.auth.signUp(
         email: email.trim(),
         password: password,
         data: {
           'full_name': fullName.trim(),
+          'account_type': accountType.key,
+          'whatsapp_number': normalized,
+          'allow_whatsapp_contact': allowWhatsappContact,
         },
       );
 
@@ -186,7 +254,9 @@ class SupabaseAuthService extends AuthService {
       final session = response.session;
 
       if (user == null) {
-        throw const AuthFailure('Gagal mendaftarkan akun. Silakan coba kembali.');
+        throw const AuthFailure(
+          'Gagal mendaftarkan akun. Silakan coba kembali.',
+        );
       }
 
       // 2. Handle email confirmation if active
@@ -197,20 +267,6 @@ class SupabaseAuthService extends AuthService {
               'Pendaftaran berhasil! Tautan verifikasi telah dikirim ke ${email.trim()}. '
               'Silakan periksa kotak masuk email Anda dan klik tautan verifikasi sebelum masuk.',
         );
-      }
-
-      // 3. If session is immediately active, save contact preference if provided
-      final normalized = normalizeWhatsapp(whatsapp);
-      if (normalized != null || allowWhatsappContact) {
-        try {
-          await _client.from('user_contacts').upsert({
-            'user_id': user.id,
-            'whatsapp_number': normalized,
-            'allow_whatsapp_contact': allowWhatsappContact,
-          });
-        } catch (_) {
-          // Contact saving is non-blocking on sign up
-        }
       }
 
       await _loadUserProfile(user);
@@ -247,7 +303,6 @@ class SupabaseAuthService extends AuthService {
   @override
   Future<void> updateProfile({
     required String fullName,
-    String? whatsapp,
     bool? allowWhatsappContact,
   }) async {
     final user = _client.auth.currentUser;
@@ -257,12 +312,12 @@ class SupabaseAuthService extends AuthService {
 
     try {
       // 1. Update full_name in public.profiles
-      await _client.from('profiles').update({
-        'full_name': fullName.trim(),
-      }).eq('id', user.id);
+      await _client
+          .from('profiles')
+          .update({'full_name': fullName.trim()})
+          .eq('id', user.id);
 
-      // 2. Upsert user_contacts
-      final normalized = normalizeWhatsapp(whatsapp);
+      // 2. Update contact permission without changing the signup phone number.
       final optIn =
           allowWhatsappContact ??
           _currentUser?.contact?.allowWhatsappContact ??
@@ -270,7 +325,6 @@ class SupabaseAuthService extends AuthService {
 
       await _client.from('user_contacts').upsert({
         'user_id': user.id,
-        'whatsapp_number': normalized,
         'allow_whatsapp_contact': optIn,
       });
 
@@ -289,12 +343,98 @@ class SupabaseAuthService extends AuthService {
   @override
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      await _client.auth.resetPasswordForEmail(email.trim());
+      await _client.auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: passwordRecoveryRedirect,
+      );
     } on AuthException catch (e) {
       throw AuthFailure(mapAuthException(e));
     } catch (e) {
       if (e is AuthFailure) rethrow;
       throw const AuthFailure('Gagal mengirim email reset kata sandi.');
+    }
+  }
+
+  @override
+  Future<void> updatePassword(String password) async {
+    if (!_isPasswordRecovery || !_isLoggedIn) {
+      throw const AuthFailure(
+        'Tautan pemulihan tidak aktif. Minta tautan reset kata sandi yang baru.',
+      );
+    }
+
+    try {
+      await _client.auth.updateUser(UserAttributes(password: password));
+    } on AuthException catch (e) {
+      throw AuthFailure(mapAuthException(e));
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw const AuthFailure(
+        'Gagal memperbarui kata sandi. Periksa koneksi internet Anda.',
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteAccount({required String password}) async {
+    if (_client.auth.currentUser == null) {
+      throw const AuthFailure('Masuk ke akun untuk menghapus akun.');
+    }
+
+    try {
+      await _client.functions.invoke(
+        'delete-account',
+        body: {'password': password},
+      );
+      await _client.auth.signOut(scope: SignOutScope.local);
+    } on AuthException catch (e) {
+      throw AuthFailure(mapAuthException(e));
+    } on FunctionException catch (e) {
+      final details = e.details;
+      final message = details is Map
+          ? details['error']?.toString()
+          : details?.toString();
+      throw AuthFailure(
+        message?.trim().isNotEmpty == true
+            ? message!.trim()
+            : 'Gagal menghapus akun. Silakan coba lagi.',
+      );
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw const AuthFailure(
+        'Gagal menghapus akun. Periksa koneksi internet Anda lalu coba lagi.',
+      );
+    }
+  }
+
+  @override
+  void completePasswordRecovery() {
+    if (!_isPasswordRecovery && _passwordRecoveryError == null) return;
+    _isPasswordRecovery = false;
+    _passwordRecoveryError = null;
+    notifyListeners();
+  }
+
+  @override
+  Future<String?> requestReporterWhatsapp(String reportId) async {
+    if (!_isLoggedIn) {
+      throw const AuthFailure('Masuk ke akun untuk meminta kontak WhatsApp.');
+    }
+
+    try {
+      final result = await _client.rpc(
+        'get_reporter_whatsapp_for_report',
+        params: {'p_report_id': reportId},
+      );
+      if (result is! String || result.trim().isEmpty) return null;
+      return result.trim();
+    } on PostgrestException catch (e) {
+      throw AuthFailure(e.message);
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw const AuthFailure(
+        'Gagal meminta kontak WhatsApp. Periksa koneksi internet Anda.',
+      );
     }
   }
 
@@ -307,13 +447,7 @@ class SupabaseAuthService extends AuthService {
 
   @visibleForTesting
   static String? normalizeWhatsapp(String? raw) {
-    if (raw == null) return null;
-    final digits = raw.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return null;
-    if (digits.startsWith('0')) {
-      return '62${digits.substring(1)}';
-    }
-    return digits;
+    return normalizeWhatsappNumber(raw);
   }
 
   @visibleForTesting

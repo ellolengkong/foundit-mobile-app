@@ -9,6 +9,37 @@ import 'package:foundit/screens/admin/admin_dashboard_screen.dart';
 
 void main() {
   group('E2E Report Flag & Admin Moderation Tests', () {
+    testWidgets('Mock mode reports when WhatsApp contact is unavailable', (
+      tester,
+    ) async {
+      final auth = MockAuthService();
+      await auth.login(email: 'user-003@unsrat.ac.id', password: 'password123');
+
+      await tester.pumpWidget(
+        FoundItApp(
+          repository: MockReportRepository(),
+          authService: auth,
+          flagRepository: MockFlagRepository(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Dompet hitam').first);
+      await tester.pumpAndSettle();
+      final contactButton = find.text('Hubungi via WhatsApp');
+      await tester.ensureVisible(contactButton);
+      await tester.pumpAndSettle();
+      await tester.tap(contactButton);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Nomor WhatsApp tidak tersedia atau pemilik belum mengizinkan kontak.',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets(
       'Guest is required to login before flagging, then proceeds to flag form',
       (tester) async {
@@ -44,7 +75,7 @@ void main() {
 
         // Fill login form as user-002 (not the owner of mock-001)
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'nama@unsrat.ac.id'),
+          find.widgetWithText(TextFormField, 'Email Anda'),
           'user-002@unsrat.ac.id',
         );
         await tester.enterText(
@@ -135,7 +166,7 @@ void main() {
         );
         expect(abaikanButtonFinder, findsWidgets);
         await tester.tap(abaikanButtonFinder.first);
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(find.text('Laporan penyalahgunaan diabaikan.'), findsOneWidget);
         await tester.pumpAndSettle();
@@ -153,6 +184,8 @@ void main() {
           'Sembunyikan & Selesai',
         );
         expect(sembunyikanSelesaiFinder, findsWidgets);
+        await tester.ensureVisible(sembunyikanSelesaiFinder.first);
+        await tester.pumpAndSettle();
         await tester.tap(sembunyikanSelesaiFinder.first);
         await tester.pump();
 
@@ -162,11 +195,22 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Verify flag review status is reviewed for mock-001
-        final flag001 = flagRepo.allFlags.firstWhere(
-          (f) => f.reportId == 'mock-001',
+        // Verify the new flag was dismissed and the remaining open flag was reviewed.
+        final flagsForReport001 = flagRepo.allFlags
+            .where((f) => f.reportId == 'mock-001')
+            .toList();
+        expect(
+          flagsForReport001.any(
+            (f) => f.reviewStatus == FlagReviewStatus.dismissed,
+          ),
+          isTrue,
         );
-        expect(flag001.reviewStatus, FlagReviewStatus.reviewed);
+        expect(
+          flagsForReport001.any(
+            (f) => f.reviewStatus == FlagReviewStatus.reviewed,
+          ),
+          isTrue,
+        );
 
         // Verify report moderationStatus is hidden
         final report001 = repo.getReportById('mock-001')!;
@@ -185,6 +229,8 @@ void main() {
         // Tap 'Tampilkan'
         final tampilkanFinder = find.widgetWithText(FilledButton, 'Tampilkan');
         expect(tampilkanFinder, findsWidgets);
+        await tester.ensureVisible(tampilkanFinder.first);
+        await tester.pumpAndSettle();
         await tester.tap(tampilkanFinder.first);
         await tester.pump();
 

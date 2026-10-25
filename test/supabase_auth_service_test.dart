@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:foundit/core/services/auth_service.dart';
 import 'package:foundit/core/services/supabase_auth_service.dart';
 import 'package:foundit/data/mock/mock_auth_service.dart';
+import 'package:foundit/data/models/user_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -81,6 +82,8 @@ void main() {
         SupabaseAuthService.normalizeWhatsapp('6281234567890'),
         '6281234567890',
       );
+      expect(SupabaseAuthService.normalizeWhatsapp('123456789'), isNull);
+      expect(SupabaseAuthService.normalizeWhatsapp('081234567890123'), isNull);
       expect(SupabaseAuthService.normalizeWhatsapp(''), isNull);
       expect(SupabaseAuthService.normalizeWhatsapp(null), isNull);
     });
@@ -95,10 +98,7 @@ void main() {
       expect(auth.isAdminMode, isFalse);
       expect(auth.canAccessAdmin, isFalse);
 
-      await auth.login(
-        email: 'test@unsrat.ac.id',
-        password: 'password123',
-      );
+      await auth.login(email: 'test@unsrat.ac.id', password: 'password123');
       expect(auth.isLoggedIn, isTrue);
       expect(auth.currentUser?.email, 'test@unsrat.ac.id');
 
@@ -111,30 +111,48 @@ void main() {
       expect(auth.isAdminMode, isFalse);
     });
 
-    test('MockAuthService signUp returns AuthResult with active session', () async {
-      final AuthService auth = MockAuthService();
+    test(
+      'MockAuthService signUp returns AuthResult with active session',
+      () async {
+        final AuthService auth = MockAuthService();
 
-      final result = await auth.signUp(
-        fullName: 'Budi Santoso',
-        email: 'budi@unsrat.ac.id',
-        password: 'password123',
-        whatsapp: '08123456789',
-        allowWhatsappContact: true,
-      );
+        final result = await auth.signUp(
+          fullName: 'Budi Santoso',
+          email: 'budi@unsrat.ac.id',
+          password: 'password123',
+          whatsapp: '08123456789',
+          accountType: AccountType.lecturer,
+          allowWhatsappContact: true,
+        );
 
-      expect(result.requiresEmailConfirmation, isFalse);
-      expect(result.user, isNotNull);
-      expect(result.user?.fullName, 'Budi Santoso');
-      expect(result.user?.contact?.whatsappNumber, '08123456789');
-      expect(result.user?.contact?.allowWhatsappContact, isTrue);
-    });
+        expect(result.requiresEmailConfirmation, isFalse);
+        expect(result.user, isNotNull);
+        expect(result.user?.fullName, 'Budi Santoso');
+        expect(result.user?.contact?.whatsappNumber, '628123456789');
+        expect(result.user?.contact?.allowWhatsappContact, isTrue);
+        expect(result.user?.accountType, AccountType.lecturer);
+      },
+    );
 
-    test('MockAuthService sendPasswordResetEmail completes without error', () async {
-      final AuthService auth = MockAuthService();
-      await expectLater(
-        auth.sendPasswordResetEmail('budi@unsrat.ac.id'),
-        completes,
-      );
-    });
+    test(
+      'MockAuthService sendPasswordResetEmail completes without error',
+      () async {
+        final AuthService auth = MockAuthService();
+        await expectLater(
+          auth.sendPasswordResetEmail('budi@unsrat.ac.id'),
+          completes,
+        );
+      },
+    );
+
+    test(
+      'MockAuthService does not expose real reporter contact data',
+      () async {
+        final auth = MockAuthService();
+        await auth.login(email: 'budi@unsrat.ac.id', password: 'password123');
+
+        expect(await auth.requestReporterWhatsapp('report-001'), isNull);
+      },
+    );
   });
 }

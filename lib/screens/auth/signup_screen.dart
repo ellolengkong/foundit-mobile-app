@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/whatsapp_number.dart';
 import '../../data/mock/foundit_scope.dart';
+import '../../data/models/user_profile.dart';
 import '../../widgets/primary_button.dart';
 import 'login_screen.dart';
 
@@ -25,6 +27,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _whatsappConsent = true;
   bool _isLoading = false;
+  AccountType _accountType = AccountType.student;
 
   @override
   void dispose() {
@@ -47,9 +50,8 @@ class _SignupScreenState extends State<SignupScreen> {
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        whatsapp: _phoneController.text.trim().isNotEmpty
-            ? _phoneController.text.trim()
-            : null,
+        whatsapp: _phoneController.text.trim(),
+        accountType: _accountType,
         allowWhatsappContact: _whatsappConsent,
       );
 
@@ -95,10 +97,7 @@ class _SignupScreenState extends State<SignupScreen> {
           ? e.message
           : e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppColors.error,
-        ),
+        SnackBar(content: Text(message), backgroundColor: AppColors.error),
       );
     }
   }
@@ -157,7 +156,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
-                    hintText: 'nama@unsrat.ac.id',
+                    hintText: 'Email Anda',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: (val) {
@@ -172,20 +171,47 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // ── Account Type ─────────────────────────────────────────
+                DropdownButtonFormField<AccountType>(
+                  initialValue: _accountType,
+                  decoration: const InputDecoration(
+                    labelText: 'Status Akademik *',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                  ),
+                  items: AccountType.values
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _isLoading
+                      ? null
+                      : (type) {
+                          if (type != null) {
+                            setState(() => _accountType = type);
+                          }
+                        },
+                ),
+                const SizedBox(height: 16),
+
                 // ── WhatsApp ──────────────────────────────────────────────
-                Text('Nomor WhatsApp (Opsional)', style: textTheme.labelLarge),
+                Text('Nomor WhatsApp *', style: textTheme.labelLarge),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
-                    hintText: '081234567890',
+                    hintText: 'Nomor Whatsapp Anda',
+                    helperText: 'Contoh : 08xxxxxxxxxxxx',
                     prefixIcon: Icon(Icons.phone_outlined),
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return null;
-                    final digits = val.replaceAll(RegExp(r'\D'), '');
-                    if (digits.length < 10 || digits.length > 15) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Nomor WhatsApp wajib diisi.';
+                    }
+                    if (normalizeWhatsappNumber(val) == null) {
                       return 'Nomor WhatsApp harus 10-15 digit angka.';
                     }
                     return null;

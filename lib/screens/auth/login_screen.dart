@@ -55,10 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ? e.message
           : e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppColors.error,
-        ),
+        SnackBar(content: Text(message), backgroundColor: AppColors.error),
       );
     }
   }
@@ -113,13 +110,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
 
                   // ── Email Field ─────────────────────────────────────────
-                  Text('Email Kampus', style: textTheme.labelLarge),
+                  Text('Email Kampus / Pribadi *', style: textTheme.labelLarge),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      hintText: 'nama@unsrat.ac.id',
+                      hintText: 'Email Anda',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (val) {
