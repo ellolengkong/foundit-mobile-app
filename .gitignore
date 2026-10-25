@@ -50,6 +50,4 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-# Dependencies
 node_modules/
-**/node_modules/
