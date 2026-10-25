@@ -14,8 +14,7 @@ import 'supabase_service.dart';
 /// - Photos are stored in `report-photos` bucket at `{report_id}/photo`.
 /// - Owner can edit content, resolve, and delete their own reports.
 class SupabaseReportRepository extends ReportRepository {
-  SupabaseReportRepository({SupabaseClient? client})
-      : _customClient = client {
+  SupabaseReportRepository({SupabaseClient? client}) : _customClient = client {
     refresh();
   }
 
@@ -216,13 +215,16 @@ class SupabaseReportRepository extends ReportRepository {
     // 1. Insert to public.reports
     // PostgreSQL defaults fill: id, owner_id, status ('active'),
     // moderation_status ('visible'), created_at, updated_at
+    final insertPayload = report.toInsertMap();
+    insertPayload.remove('photo_path');
+
     final insertedData = await _client
         .from('reports')
-        .insert(report.toInsertMap())
+        .insert(insertPayload)
         .select()
         .single();
 
-    var createdReport = Report.fromMap(insertedData);
+    var createdReport = Report.fromMap(insertedData).copyWith(photoPath: null);
 
     // 2. Upload optional photo to Supabase Storage
     if (photoBytes != null && photoBytes.isNotEmpty) {
@@ -234,24 +236,25 @@ class SupabaseReportRepository extends ReportRepository {
       final mime = photoMimeType ?? 'image/jpeg';
 
       try {
-        await _client.storage.from('report-photos').uploadBinary(
-          objectPath,
-          photoBytes,
-          fileOptions: FileOptions(
-            contentType: mime,
-            upsert: true,
-          ),
-        );
+        await _client.storage
+            .from('report-photos')
+            .uploadBinary(
+              objectPath,
+              photoBytes,
+              fileOptions: FileOptions(contentType: mime, upsert: true),
+            );
 
         // 3. Update photo_path in public.reports
-        await _client.from('reports').update({
-          'photo_path': objectPath,
-        }).eq('id', createdReport.id);
+        await _client
+            .from('reports')
+            .update({'photo_path': objectPath})
+            .eq('id', createdReport.id);
 
         createdReport = createdReport.copyWith(photoPath: objectPath);
       } catch (e) {
         debugPrint('Photo upload failed: $e');
         // Report exists without photo as per specification
+        createdReport = createdReport.copyWith(photoPath: null);
       }
     }
 
@@ -275,9 +278,7 @@ class SupabaseReportRepository extends ReportRepository {
     // 1. Handle photo removal
     if (removePhoto && currentPhotoPath != null) {
       try {
-        await _client.storage
-            .from('report-photos')
-            .remove([currentPhotoPath]);
+        await _client.storage.from('report-photos').remove([currentPhotoPath]);
       } catch (_) {}
       currentPhotoPath = null;
     }
@@ -290,14 +291,13 @@ class SupabaseReportRepository extends ReportRepository {
       final objectPath = '${updated.id}/photo';
       final mime = photoMimeType ?? 'image/jpeg';
 
-      await _client.storage.from('report-photos').uploadBinary(
-        objectPath,
-        newPhotoBytes,
-        fileOptions: FileOptions(
-          contentType: mime,
-          upsert: true,
-        ),
-      );
+      await _client.storage
+          .from('report-photos')
+          .uploadBinary(
+            objectPath,
+            newPhotoBytes,
+            fileOptions: FileOptions(contentType: mime, upsert: true),
+          );
       currentPhotoPath = objectPath;
     }
 
@@ -307,10 +307,7 @@ class SupabaseReportRepository extends ReportRepository {
       'photo_path': currentPhotoPath,
     };
 
-    await _client
-        .from('reports')
-        .update(updatePayload)
-        .eq('id', updated.id);
+    await _client.from('reports').update(updatePayload).eq('id', updated.id);
 
     final finalReport = updated.copyWith(
       photoPath: currentPhotoPath,
@@ -339,9 +336,7 @@ class SupabaseReportRepository extends ReportRepository {
 
   @override
   Future<void> resolveReport(String id) async {
-    await _client
-        .from('reports')
-        .update({'status': 'resolved'}).eq('id', id);
+    await _client.from('reports').update({'status': 'resolved'}).eq('id', id);
 
     final userIdx = _userReports.indexWhere((r) => r.id == id);
     if (userIdx != -1) {
@@ -357,9 +352,7 @@ class SupabaseReportRepository extends ReportRepository {
 
   @override
   Future<void> reopenReport(String id) async {
-    await _client
-        .from('reports')
-        .update({'status': 'active'}).eq('id', id);
+    await _client.from('reports').update({'status': 'active'}).eq('id', id);
 
     final userIdx = _userReports.indexWhere((r) => r.id == id);
     if (userIdx != -1) {
@@ -380,9 +373,7 @@ class SupabaseReportRepository extends ReportRepository {
     final report = getReportById(id);
     if (report?.photoPath != null && report!.photoPath!.isNotEmpty) {
       try {
-        await _client.storage
-            .from('report-photos')
-            .remove([report.photoPath!]);
+        await _client.storage.from('report-photos').remove([report.photoPath!]);
       } catch (_) {}
     }
 
@@ -397,10 +388,13 @@ class SupabaseReportRepository extends ReportRepository {
   Future<void> setModerationStatus(String id, ModerationStatus status) async {
     try {
       // 1. Invoke RPC admin_set_report_moderation (admin only)
-      await _client.rpc('admin_set_report_moderation', params: {
-        'p_report_id': id,
-        'p_moderation_status': status.key, // 'visible' or 'hidden'
-      });
+      await _client.rpc(
+        'admin_set_report_moderation',
+        params: {
+          'p_report_id': id,
+          'p_moderation_status': status.key, // 'visible' or 'hidden'
+        },
+      );
 
       // 2. Update local _adminReports cache
       final adminIdx = _adminReports.indexWhere((r) => r.id == id);

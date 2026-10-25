@@ -116,7 +116,84 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       }
     } catch (_) {
       // Fallback for automated test environments
-      setState(() => _hasPhoto = !_hasPhoto);
+      setState(() {
+        _hasPhoto = !_hasPhoto;
+        if (_hasPhoto) {
+          _selectedPhotoBytes = Uint8List.fromList([
+            0x89,
+            0x50,
+            0x4E,
+            0x47,
+            0x0D,
+            0x0A,
+            0x1A,
+            0x0A,
+            0x00,
+            0x00,
+            0x00,
+            0x0D,
+            0x49,
+            0x48,
+            0x44,
+            0x52,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0x08,
+            0x06,
+            0x00,
+            0x00,
+            0x00,
+            0x1F,
+            0x15,
+            0xC4,
+            0x89,
+            0x00,
+            0x00,
+            0x00,
+            0x0A,
+            0x49,
+            0x44,
+            0x41,
+            0x54,
+            0x78,
+            0x9C,
+            0x63,
+            0x00,
+            0x01,
+            0x00,
+            0x00,
+            0x05,
+            0x00,
+            0x01,
+            0x0D,
+            0x0A,
+            0x2D,
+            0xB4,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x49,
+            0x45,
+            0x4E,
+            0x44,
+            0xAE,
+            0x42,
+            0x60,
+            0x82,
+          ]);
+          _selectedPhotoMimeType = 'image/png';
+        } else {
+          _selectedPhotoBytes = null;
+          _selectedPhotoMimeType = null;
+        }
+      });
     }
   }
 
@@ -199,7 +276,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
           description: _descriptionController.text.trim().isNotEmpty
               ? _descriptionController.text.trim()
               : null,
-          photoPath: _hasPhoto ? '$ownerId/photo' : null,
+          photoPath: null,
           createdAt: now,
           updatedAt: now,
         );
@@ -241,13 +318,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     final textTheme = Theme.of(context).textTheme;
     final isEditing = widget.initialReport != null;
 
-    final buildingsForArea =
-        kBuildingsByArea[_selectedArea] ?? <String>[];
+    final buildingsForArea = kBuildingsByArea[_selectedArea] ?? <String>[];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Laporan' : 'Buat Laporan'),
-      ),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Laporan' : 'Buat Laporan')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -311,8 +385,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                           height: 140,
                           errorBuilder: (context, error, stackTrace) =>
                               const Center(
-                            child: Icon(Icons.broken_image, size: 40),
-                          ),
+                                child: Icon(Icons.broken_image, size: 40),
+                              ),
                         )
                       else
                         Center(
@@ -417,9 +491,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 prefixIcon: Icon(Icons.map_outlined),
               ),
               items: kCampusAreas
-                  .map(
-                    (a) => DropdownMenuItem(value: a, child: Text(a)),
-                  )
+                  .map((a) => DropdownMenuItem(value: a, child: Text(a)))
                   .toList(),
               onChanged: (val) {
                 setState(() {
@@ -491,8 +563,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               controller: _descriptionController,
               maxLines: 4,
               decoration: const InputDecoration(
-                hintText:
-                    'Deskripsikan ciri umum barang. Hindari menuliskan detail rahasia seperti nomor PIN atau isi saldo.',
+                hintText: 'Deskripsikan ciri umum barang. Hindari menuliskan detail rahasia seperti nomor PIN atau isi saldo.',
               ),
             ),
             const SizedBox(height: 8),

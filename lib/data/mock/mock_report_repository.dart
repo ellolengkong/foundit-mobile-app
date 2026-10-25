@@ -107,6 +107,8 @@ class MockReportRepository extends ReportRepository {
     return Future.value();
   }
 
+  bool simulatePhotoUploadFailure = false;
+
   /// Adds a new report to the repository (inserted at top).
   @override
   Future<Report> createReport(
@@ -114,9 +116,21 @@ class MockReportRepository extends ReportRepository {
     Uint8List? photoBytes,
     String? photoMimeType,
   }) {
-    _reports.insert(0, report);
+    String? photoPath;
+    if (photoBytes != null && photoBytes.isNotEmpty) {
+      if (!simulatePhotoUploadFailure) {
+        photoPath = '${report.id}/photo';
+      } else {
+        photoPath = null;
+      }
+    } else {
+      photoPath = report.photoPath;
+    }
+
+    final effectiveReport = report.copyWith(photoPath: photoPath);
+    _reports.insert(0, effectiveReport);
     notifyListeners();
-    return Future.value(report);
+    return Future.value(effectiveReport);
   }
 
   /// Updates an existing report.
@@ -129,8 +143,17 @@ class MockReportRepository extends ReportRepository {
   }) {
     final idx = _reports.indexWhere((r) => r.id == updated.id);
     if (idx != -1) {
+      String? photoPath = removePhoto ? null : updated.photoPath;
+      if (!removePhoto && newPhotoBytes != null && newPhotoBytes.isNotEmpty) {
+        if (!simulatePhotoUploadFailure) {
+          photoPath = '${updated.id}/photo';
+        } else {
+          photoPath = null;
+        }
+      }
+
       _reports[idx] = updated.copyWith(
-        photoPath: removePhoto ? null : updated.photoPath,
+        photoPath: photoPath,
         updatedAt: DateTime.now(),
       );
       notifyListeners();
