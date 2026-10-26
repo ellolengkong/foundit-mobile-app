@@ -25,7 +25,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _whatsappConsent = true;
+  bool _whatsappConsent = false;
   bool _isLoading = false;
   AccountType _accountType = AccountType.student;
 

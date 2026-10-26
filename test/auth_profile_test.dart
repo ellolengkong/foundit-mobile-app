@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foundit/app.dart';
 import 'package:foundit/core/services/auth_service.dart';
+import 'package:foundit/data/mock/foundit_scope.dart';
 import 'package:foundit/data/mock/mock_auth_service.dart';
 import 'package:foundit/data/mock/mock_flag_repository.dart';
 import 'package:foundit/data/mock/mock_report_repository.dart';
@@ -48,6 +49,23 @@ void main() {
       expect(auth.currentUser!.contact!.whatsappNumber, '6281122334455');
       expect(auth.currentUser!.contact!.allowWhatsappContact, isTrue);
     });
+
+    test(
+      'signUp defaults allowWhatsappContact to false when not specified',
+      () async {
+        final auth = MockAuthService();
+        await auth.signUp(
+          fullName: 'Carol Danvers',
+          email: 'carol@unsrat.ac.id',
+          password: 'password123',
+          whatsapp: '081122334455',
+        );
+
+        expect(auth.currentUser!.contact, isNotNull);
+        expect(auth.currentUser!.contact!.whatsappNumber, '6281122334455');
+        expect(auth.currentUser!.contact!.allowWhatsappContact, isFalse);
+      },
+    );
 
     test(
       'signUp stores lecturer account type separately from admin role',
@@ -140,6 +158,127 @@ void main() {
 
       expect(find.text('Dosen'), findsOneWidget);
     });
+
+    testWidgets(
+      'Signup screen consent checkbox defaults to unchecked and can be toggled',
+      (tester) async {
+        await tester.pumpWidget(const MaterialApp(home: SignupScreen()));
+
+        final consentCheckbox = find.byType(CheckboxListTile);
+        expect(consentCheckbox, findsOneWidget);
+        expect(tester.widget<CheckboxListTile>(consentCheckbox).value, isFalse);
+
+        await tester.ensureVisible(consentCheckbox);
+        await tester.tap(consentCheckbox);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<CheckboxListTile>(consentCheckbox).value, isTrue);
+
+        await tester.tap(consentCheckbox);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<CheckboxListTile>(consentCheckbox).value, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Signup passes allowWhatsappContact as false by default to AuthService',
+      (tester) async {
+        final auth = MockAuthService();
+        final repo = MockReportRepository();
+        final flagRepo = MockFlagRepository();
+
+        await tester.pumpWidget(
+          FoundItScope(
+            authService: auth,
+            repository: repo,
+            flagRepository: flagRepo,
+            child: const MaterialApp(home: SignupScreen()),
+          ),
+        );
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nama lengkap Anda'),
+          'Budi Pengguna',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Email Anda'),
+          'budi.pengguna@unsrat.ac.id',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nomor Whatsapp Anda'),
+          '081234567890',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Minimal 6 karakter'),
+          'password123',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Ulangi kata sandi'),
+          'password123',
+        );
+
+        final submitButton = find.text('Daftar Akun');
+        await tester.ensureVisible(submitButton);
+        await tester.tap(submitButton);
+        await tester.pumpAndSettle();
+
+        expect(auth.isLoggedIn, isTrue);
+        expect(auth.currentUser?.contact?.allowWhatsappContact, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Signup passes allowWhatsappContact as true when checkbox is opted in by user',
+      (tester) async {
+        final auth = MockAuthService();
+        final repo = MockReportRepository();
+        final flagRepo = MockFlagRepository();
+
+        await tester.pumpWidget(
+          FoundItScope(
+            authService: auth,
+            repository: repo,
+            flagRepository: flagRepo,
+            child: const MaterialApp(home: SignupScreen()),
+          ),
+        );
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nama lengkap Anda'),
+          'Siti Pengguna',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Email Anda'),
+          'siti.pengguna@unsrat.ac.id',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nomor Whatsapp Anda'),
+          '081234567891',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Minimal 6 karakter'),
+          'password123',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Ulangi kata sandi'),
+          'password123',
+        );
+
+        final consentCheckbox = find.byType(CheckboxListTile);
+        await tester.ensureVisible(consentCheckbox);
+        await tester.tap(consentCheckbox);
+        await tester.pumpAndSettle();
+
+        final submitButton = find.text('Daftar Akun');
+        await tester.ensureVisible(submitButton);
+        await tester.tap(submitButton);
+        await tester.pumpAndSettle();
+
+        expect(auth.isLoggedIn, isTrue);
+        expect(auth.currentUser?.contact?.allowWhatsappContact, isTrue);
+      },
+    );
 
     testWidgets('Edit profile does not ask for a WhatsApp number again', (
       tester,
