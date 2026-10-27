@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'core/services/auth_service.dart';
@@ -84,6 +85,7 @@ class _FoundItAppState extends State<FoundItApp> {
     if (SupabaseService.isInitialized) {
       return SupabaseReportRepository();
     }
+    _assertMockAllowed();
     return MockReportRepository();
   }
 
@@ -91,6 +93,7 @@ class _FoundItAppState extends State<FoundItApp> {
     if (SupabaseService.isInitialized) {
       return SupabaseAuthService();
     }
+    _assertMockAllowed();
     return MockAuthService();
   }
 
@@ -98,7 +101,19 @@ class _FoundItAppState extends State<FoundItApp> {
     if (SupabaseService.isInitialized) {
       return SupabaseFlagRepository();
     }
+    _assertMockAllowed();
     return MockFlagRepository();
+  }
+
+  /// Throws in release mode to prevent silent mock fallback.
+  static void _assertMockAllowed() {
+    if (kReleaseMode) {
+      throw StateError(
+        'Supabase belum diinisialisasi. Build release tidak boleh '
+        'menggunakan mock services. Pastikan SUPABASE_URL dan '
+        'SUPABASE_ANON_KEY dikonfigurasi melalui --dart-define-from-file=.env',
+      );
+    }
   }
 
   @override

@@ -89,16 +89,17 @@ class Report {
   /// Deserializes a report from Supabase JSON / PostgREST map.
   factory Report.fromMap(Map<String, dynamic> map) {
     final typeKey = map['report_type'] as String? ?? 'lost';
-    final reportType =
-        typeKey == 'found' ? ReportType.found : ReportType.lost;
+    final reportType = typeKey == 'found' ? ReportType.found : ReportType.lost;
 
     final statusKey = map['status'] as String? ?? 'active';
-    final status =
-        statusKey == 'resolved' ? ReportStatus.resolved : ReportStatus.active;
+    final status = statusKey == 'resolved'
+        ? ReportStatus.resolved
+        : ReportStatus.active;
 
     final modKey = map['moderation_status'] as String? ?? 'visible';
-    final moderationStatus =
-        modKey == 'hidden' ? ModerationStatus.hidden : ModerationStatus.visible;
+    final moderationStatus = modKey == 'hidden'
+        ? ModerationStatus.hidden
+        : ModerationStatus.visible;
 
     DateTime parseDate(dynamic val) {
       if (val is DateTime) return val;
