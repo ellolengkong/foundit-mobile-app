@@ -58,7 +58,8 @@ class ReportFlag {
         (s) => s.key == map['review_status'],
         orElse: () => FlagReviewStatus.open,
       ),
-      createdAt: DateTime.tryParse(map['created_at'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(map['created_at'] as String? ?? '') ??
           DateTime.now(),
     );
   }

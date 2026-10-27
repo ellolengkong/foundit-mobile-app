@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Centralized access to the Supabase client instance.
@@ -29,6 +30,13 @@ class SupabaseService {
     }
   }
 
+  /// Whether the app should use mock/in-memory services.
+  ///
+  /// Returns `true` only in debug/profile mode when Supabase is not
+  /// initialized. In release mode, mock fallback is never allowed —
+  /// Supabase must be properly configured.
+  static bool get useMockServices => !isInitialized;
+
   /// Initializes the Supabase client with build-time configuration.
   ///
   /// Call this once in `main()` before `runApp()`:
@@ -50,12 +58,48 @@ class SupabaseService {
     _initialized = true;
   }
 
-  /// Initializes Supabase when credentials are supplied; otherwise the app
-  /// can continue with its in-memory mock services.
+  /// Initializes Supabase when credentials are supplied; throws in release
+  /// mode if credentials are missing or incomplete.
+  ///
+  /// In debug/profile mode, returns `false` when no credentials are
+  /// configured, allowing the app to continue with mock services for
+  /// development and testing.
   static Future<bool> initializeIfConfigured() async {
-    if (_url.isEmpty && _anonKey.isEmpty) return false;
-    await initialize();
-    return true;
+    if (isConfigured) {
+      await initialize();
+      return true;
+    }
+
+    // Detect partial configuration (one value provided but not the other).
+    final hasUrl = _url.isNotEmpty;
+    final hasKey = _anonKey.isNotEmpty;
+    if (hasUrl != hasKey) {
+      // One is provided, the other is not — always an error regardless of mode.
+      final missing = hasUrl ? 'SUPABASE_ANON_KEY' : 'SUPABASE_URL';
+      throw StateError(
+        'Konfigurasi Supabase tidak lengkap: $missing tidak tersedia. '
+        'Pastikan kedua variabel disediakan melalui --dart-define-from-file=.env',
+      );
+    }
+
+    // Neither credential provided.
+    if (kReleaseMode) {
+      throw StateError(
+        'Build release memerlukan konfigurasi Supabase. '
+        'Sediakan SUPABASE_URL dan SUPABASE_ANON_KEY melalui '
+        '--dart-define-from-file=.env',
+      );
+    }
+
+    // Debug/profile: allow mock fallback for development.
+    assert(() {
+      debugPrint(
+        'SupabaseService: Kredensial tidak dikonfigurasi — '
+        'menggunakan mock services (hanya mode pengembangan).',
+      );
+      return true;
+    }());
+    return false;
   }
 
   /// The global Supabase client instance.
