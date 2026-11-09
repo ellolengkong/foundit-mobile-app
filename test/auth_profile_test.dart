@@ -542,7 +542,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Scroll down to version footer
-        final versionFinder = find.text('FoundIt UNSRAT v1.0.0 (M1 Prototype)');
+        final versionFinder = find.text('FoundIt UNSRAT v1.0.0');
         await tester.scrollUntilVisible(
           versionFinder,
           200,

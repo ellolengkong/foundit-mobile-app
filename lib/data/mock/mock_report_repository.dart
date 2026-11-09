@@ -20,7 +20,7 @@ class MockReportRepository extends ReportRepository {
 
   /// Returns publicly visible reports filtered by criteria.
   ///
-  /// Public feed rule: only active + visible reports appear.
+  /// Public feed rule: active and resolved reports appear unless hidden by moderation.
   @override
   List<Report> getPublicReports({
     ReportType? type,

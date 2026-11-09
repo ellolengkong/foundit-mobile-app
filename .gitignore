@@ -13,7 +13,9 @@
 migrate_working_dir/
 supabase/.temp/
 .env
-.env.json
+google-services.json
+GoogleService-Info.plist
+supabase/functions/.env
 
 # IntelliJ related
 *.iml

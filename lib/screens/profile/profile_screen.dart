@@ -227,7 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   horizontal: 16,
                 ),
                 child: Text(
-                  'FoundIt UNSRAT v1.0.0 (M1 Prototype)',
+                  'FoundIt UNSRAT v1.0.0',
                   style: textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -358,7 +358,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       horizontal: 16,
                     ),
                     child: Text(
-                      'FoundIt UNSRAT v1.0.0 (M1 Prototype)',
+                      'FoundIt UNSRAT v1.0.0',
                       style: textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                       ),

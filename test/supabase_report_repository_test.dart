@@ -133,6 +133,7 @@ void main() {
         expect(report.status, ReportStatus.active);
         expect(report.moderationStatus, ModerationStatus.visible);
         expect(report.isPubliclyVisible, isTrue);
+        expect(report.isOwnedBy('admin-uuid'), isFalse);
       },
     );
 
@@ -155,9 +156,36 @@ void main() {
 
       expect(report.id, 'rep-user-2');
       expect(report.ownerId, 'user-uuid-123');
+      expect(report.isOwnedBy('user-uuid-123'), isTrue);
+      expect(report.isOwnedBy('admin-uuid'), isFalse);
       expect(report.reportType, ReportType.found);
       expect(report.itemName, 'Tumbler Hydro Flask');
       expect(report.moderationStatus, ModerationStatus.visible);
+    });
+
+    test('Report.copyWith can clear optional location fields', () {
+      final report = Report(
+        id: 'rep-location-clear',
+        reportType: ReportType.lost,
+        itemName: 'Dompet',
+        category: 'wallets',
+        campusArea: 'Fakultas Teknik',
+        buildingName: 'Gedung Kuliah Teknik',
+        specificLocation: 'Lantai 2',
+        eventDate: DateTime(2026, 11, 9),
+        createdAt: DateTime(2026, 11, 9),
+        updatedAt: DateTime(2026, 11, 9),
+      );
+
+      final updated = report.copyWith(
+        clearBuildingName: true,
+        clearSpecificLocation: true,
+      );
+
+      expect(updated.buildingName, isNull);
+      expect(updated.specificLocation, isNull);
+      expect(report.buildingName, 'Gedung Kuliah Teknik');
+      expect(report.specificLocation, 'Lantai 2');
     });
 
     test(
@@ -285,6 +313,32 @@ void main() {
       // Delete
       await repo.deleteReport('custom-rep-101');
       expect(repo.getReportById('custom-rep-101'), isNull);
+    });
+
+    test('updateReport persists cleared optional location fields', () async {
+      final now = DateTime.now();
+      final report = Report(
+        id: 'report-clear-location',
+        ownerId: 'user-xyz',
+        reportType: ReportType.lost,
+        itemName: 'Dompet',
+        category: 'wallets',
+        campusArea: 'Fakultas Teknik',
+        buildingName: 'Gedung Kuliah Teknik',
+        specificLocation: 'Lantai 2',
+        eventDate: now,
+        createdAt: now,
+        updatedAt: now,
+      );
+      await repo.createReport(report);
+
+      await repo.updateReport(
+        report.copyWith(clearBuildingName: true, clearSpecificLocation: true),
+      );
+
+      final updated = repo.getReportById(report.id);
+      expect(updated?.buildingName, isNull);
+      expect(updated?.specificLocation, isNull);
     });
 
     test(

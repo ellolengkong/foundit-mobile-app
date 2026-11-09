@@ -23,9 +23,11 @@ This folder contains the planning and implementation rules for the FoundIt Andro
 - WhatsApp integration: `url_launcher` and an authenticated Supabase database function for contact lookup.
 - Supabase credentials are supplied at run/build time with `SUPABASE_URL` and `SUPABASE_ANON_KEY`. If both are omitted, the app starts with in-memory mock services; supplying only one is a configuration error.
 - Android password recovery redirects to `com.example.foundit://reset-password`. Add this exact URI to Supabase Auth's allowed redirect URLs. If the Android `applicationId` changes, update the URI in `SupabaseAuthService.passwordRecoveryRedirect`, the Android manifest intent filter, and Supabase Auth URL Configuration together.
-- No Firebase, FlutterFlow, Cloudinary, paid services, internal chat, push notifications, GPS/maps, or AI image recognition in MVP.
+- Firebase Cloud Messaging is configured for Android (`foundit-unsrat` / `com.example.foundit`). iOS push remains disabled until its Firebase app and APNs credentials are configured.
 
 Apply the versioned Supabase migrations before using the backend. The WhatsApp contact flow requires `20261025000000_reporter_whatsapp_rpc.sql` in addition to the schema, RLS, and Storage migrations. See `md/M2A_DATABASE_GUIDE.md` for the CLI workflow.
+
+Push delivery requires the `20261106230000_push_notification_tokens.sql` migration, the `send-push-notification` Edge Function, and a Supabase Database Webhook for inserts to `public.notifications`. Configure `FIREBASE_SERVICE_ACCOUNT` and `PUSH_WEBHOOK_SECRET` as Edge Function secrets; never commit service-account credentials. See `md/PUSH_NOTIFICATIONS_SETUP.md`.
 
 For Android password recovery, add `com.example.foundit://reset-password` under **Supabase Dashboard → Authentication → URL Configuration → Redirect URLs**. The email link opens the app, where the user enters and confirms a new password. This URI uses the current Android application ID and must be updated in the Android manifest, `SupabaseAuthService.passwordRecoveryRedirect`, and Supabase Auth settings together if that ID changes.
 

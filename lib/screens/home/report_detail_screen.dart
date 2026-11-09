@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/categories.dart';
-import '../../core/constants/locations.dart';
 import '../../core/constants/report_enums.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/mock/foundit_scope.dart';
@@ -364,9 +363,6 @@ class ReportDetailScreen extends StatelessWidget {
         report.buildingName!.isNotEmpty &&
         report.buildingName != 'Tidak tahu') {
       buffer.write(' · ${report.buildingName}');
-      if (isExampleBuilding(report.buildingName)) {
-        buffer.write(' (data contoh)');
-      }
     }
     if (report.specificLocation != null &&
         report.specificLocation!.isNotEmpty) {
@@ -426,7 +422,7 @@ class ReportDetailScreen extends StatelessWidget {
       return;
     }
 
-    if (!report.isPubliclyVisible) {
+    if (report.status != ReportStatus.active || !report.isPubliclyVisible) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(

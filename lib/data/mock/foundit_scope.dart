@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/services/auth_service.dart';
 import '../../core/services/flag_repository.dart';
+import '../../core/services/notification_repository.dart';
 import '../../core/services/report_repository.dart';
 
 /// Provides [ReportRepository], [AuthService], and [FlagRepository] down the widget tree.
@@ -11,12 +12,14 @@ class FoundItScope extends InheritedWidget {
     required this.repository,
     required this.authService,
     required this.flagRepository,
+    this.notificationRepository,
     required super.child,
   });
 
   final ReportRepository repository;
   final AuthService authService;
   final FlagRepository flagRepository;
+  final NotificationRepository? notificationRepository;
 
   static FoundItScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<FoundItScope>();
@@ -28,6 +31,7 @@ class FoundItScope extends InheritedWidget {
   bool updateShouldNotify(FoundItScope oldWidget) {
     return repository != oldWidget.repository ||
         authService != oldWidget.authService ||
-        flagRepository != oldWidget.flagRepository;
+        flagRepository != oldWidget.flagRepository ||
+        notificationRepository != oldWidget.notificationRepository;
   }
 }

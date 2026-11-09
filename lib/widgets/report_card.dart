@@ -4,6 +4,7 @@ import '../core/constants/categories.dart';
 import '../core/constants/report_enums.dart';
 import '../core/theme/app_colors.dart';
 import '../data/models/report.dart';
+import 'report_status_badge.dart';
 import 'status_chip.dart';
 
 /// A card displaying a single report in the feed.
@@ -65,6 +66,10 @@ class ReportCard extends StatelessWidget {
                     Row(
                       children: [
                         StatusChip(reportType: report.reportType),
+                        if (report.status == ReportStatus.resolved) ...[
+                          const SizedBox(width: 6),
+                          ReportStatusBadge(status: report.status),
+                        ],
                         const Spacer(),
                         Icon(
                           Icons.arrow_outward_rounded,

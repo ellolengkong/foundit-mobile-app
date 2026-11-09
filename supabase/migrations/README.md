@@ -9,6 +9,7 @@ This directory contains versioned SQL migrations for the FoundIt database follow
 | `20261024045913_schema.sql` | Tables, constraints, indexes, triggers, `is_admin()`, and `public_reports` view |
 | `20261024050151_rls_policies.sql` | RLS enable, column-level grants, row-level policies, and admin moderation RPCs |
 | `20261024050328_storage.sql` | `report-photos` bucket registration, fixed `{report_id}/photo` Storage policies |
+| `20261109010000_show_resolved_reports_in_feed.sql` | Includes active and resolved reports in the public feed while preserving moderation-hidden reports |
 
 ## Storage Convention: `report-photos`
 

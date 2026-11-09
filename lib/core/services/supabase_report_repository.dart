@@ -107,20 +107,22 @@ class SupabaseReportRepository extends ReportRepository {
 
   @override
   Report? getReportById(String id) {
-    try {
-      return _userReports.firstWhere(
-        (r) => r.id == id,
-        orElse: () => _publicReports.firstWhere((r) => r.id == id),
-      );
-    } catch (_) {
-      return null;
+    for (final reports in [_adminReports, _userReports, _publicReports]) {
+      for (final report in reports) {
+        if (report.id == id) return report;
+      }
     }
+    return null;
   }
 
   @override
   bool isUserReportOwner(String reportId, String userId) {
-    return _userReports.any((r) => r.id == reportId) ||
-        _publicReports.any((r) => r.id == reportId && r.ownerId == userId);
+    return _userReports.any(
+          (r) => r.id == reportId && r.isOwnedBy(userId),
+        ) ||
+        _publicReports.any(
+          (r) => r.id == reportId && r.isOwnedBy(userId),
+        );
   }
 
   @override
@@ -166,7 +168,7 @@ class SupabaseReportRepository extends ReportRepository {
     }
   }
 
-  /// Fetches active & visible public reports from the `public_reports` view.
+  /// Fetches publicly visible reports from the `public_reports` view.
   Future<void> fetchPublicReports() async {
     try {
       final response = await _client
