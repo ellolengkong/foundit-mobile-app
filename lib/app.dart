@@ -22,6 +22,7 @@ import 'data/mock/mock_report_repository.dart';
 import 'screens/auth/password_recovery_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/shell/app_shell.dart';
+import 'widgets/foundit_splash_screen.dart';
 
 /// Root application widget.
 class FoundItApp extends StatefulWidget {
@@ -54,6 +55,8 @@ class _FoundItAppState extends State<FoundItApp> {
   PushNotificationService? _pushNotificationService;
   final _navigatorKey = GlobalKey<NavigatorState>();
   bool _recoveryRouteActive = false;
+  bool _showSplashScreen = true;
+  Timer? _splashScreenTimer;
 
   @override
   void initState() {
@@ -72,6 +75,9 @@ class _FoundItAppState extends State<FoundItApp> {
     _authService.addListener(_syncPushNotificationUser);
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncRecoveryRoute());
     _syncNotificationUser();
+    _splashScreenTimer = Timer(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _showSplashScreen = false);
+    });
   }
 
   @override
@@ -79,6 +85,7 @@ class _FoundItAppState extends State<FoundItApp> {
     _authService.removeListener(_syncRecoveryRoute);
     _authService.removeListener(_syncNotificationUser);
     _authService.removeListener(_syncPushNotificationUser);
+    _splashScreenTimer?.cancel();
     _pushNotificationService?.setNotificationTapHandler(null);
     if (_ownsPushNotificationService) {
       unawaited(_pushNotificationService?.dispose());
@@ -239,6 +246,13 @@ class _FoundItAppState extends State<FoundItApp> {
         title: 'FoundIt UNSRAT',
         theme: AppTheme.light,
         debugShowCheckedModeBanner: false,
+        builder: (context, child) => Stack(
+          fit: StackFit.expand,
+          children: [
+            ?child,
+            if (_showSplashScreen) const FoundItSplashScreen(),
+          ],
+        ),
         home: const AppShell(),
       ),
     );

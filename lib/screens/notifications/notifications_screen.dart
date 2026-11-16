@@ -104,7 +104,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         EmptyState(
                           icon: Icons.notifications_none_rounded,
                           title: 'Belum Ada Notifikasi',
-                          subtitle: 'Pembaruan laporan dan laporan yang cocok akan muncul di sini.',
+                          subtitle: 'Laporan baru, pembaruan laporan, dan laporan yang cocok akan muncul di sini.',
                         ),
                       ],
                     ),
@@ -166,7 +166,10 @@ class NotificationBellButton extends StatelessWidget {
                     ? '99+'
                     : '${notifications.unreadCount}',
               ),
-              child: const Icon(Icons.notifications_outlined),
+              child: const Icon(
+                Icons.notifications_outlined,
+                color: Colors.white,
+              ),
             ),
           ),
         );
@@ -182,6 +185,7 @@ class _NotificationTile extends StatelessWidget {
   final VoidCallback onTap;
 
   IconData get _icon => switch (notification.type) {
+    AppNotificationType.newReport => Icons.post_add_outlined,
     AppNotificationType.matchingReport => Icons.find_in_page_outlined,
     AppNotificationType.adminUpdate => Icons.campaign_outlined,
     AppNotificationType.reportStatus => Icons.assignment_turned_in_outlined,

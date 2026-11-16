@@ -46,6 +46,11 @@ void main() {
     );
 
     expect(notificationRepository.unreadCount, 1);
+    final bellIcon = tester.widget<Icon>(
+      find.byIcon(Icons.notifications_outlined),
+    );
+    expect(bellIcon.color, Colors.white);
+
     await tester.tap(find.byTooltip('Notifikasi'));
     await tester.pumpAndSettle();
 
@@ -59,6 +64,13 @@ void main() {
 
   test('unknown notification type is rejected', () {
     expect(() => AppNotificationType.fromKey('unknown'), throwsArgumentError);
+  });
+
+  test('new report notification type is recognized', () {
+    expect(
+      AppNotificationType.fromKey('new_report'),
+      AppNotificationType.newReport,
+    );
   });
 
   test('mock repository clears notifications on logout', () async {

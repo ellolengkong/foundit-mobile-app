@@ -1,4 +1,5 @@
 enum AppNotificationType {
+  newReport('new_report'),
   reportStatus('report_status'),
   matchingReport('matching_report'),
   adminUpdate('admin_update');
@@ -8,6 +9,7 @@ enum AppNotificationType {
   final String key;
 
   static AppNotificationType fromKey(String? key) => switch (key) {
+    'new_report' => AppNotificationType.newReport,
     'report_status' => AppNotificationType.reportStatus,
     'matching_report' => AppNotificationType.matchingReport,
     'admin_update' => AppNotificationType.adminUpdate,
