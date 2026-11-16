@@ -27,6 +27,7 @@ class SupabaseAuthService extends AuthService {
   bool _isAdminMode = false;
   bool _isPasswordRecovery = false;
   String? _passwordRecoveryError;
+  Future<void> Function()? beforeSignOut;
 
   static const passwordRecoveryRedirect =
       'com.example.foundit://reset-password';
@@ -289,9 +290,17 @@ class SupabaseAuthService extends AuthService {
   @override
   Future<void> logout() async {
     try {
+      await beforeSignOut?.call();
       await _client.auth.signOut();
-    } catch (_) {
-      // Ignored
+    } catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'Supabase authentication',
+          context: ErrorDescription('while signing out'),
+        ),
+      );
     } finally {
       _currentUser = null;
       _isLoggedIn = false;

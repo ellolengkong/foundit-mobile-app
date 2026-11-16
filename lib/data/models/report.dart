@@ -63,10 +63,11 @@ class Report {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  /// Whether this report should appear in the public feed.
-  bool get isPubliclyVisible =>
-      status == ReportStatus.active &&
-      moderationStatus == ModerationStatus.visible;
+  /// Whether moderation allows this report to be shown publicly.
+  bool get isPubliclyVisible => moderationStatus == ModerationStatus.visible;
+
+  /// Whether this report belongs to [userId].
+  bool isOwnedBy(String userId) => ownerId == userId;
 
   /// Returns the full public URL for [photoPath] if Supabase is initialized.
   String? get publicPhotoUrl => resolvePhotoUrl(photoPath);
@@ -179,6 +180,8 @@ class Report {
     String? campusArea,
     String? buildingName,
     String? specificLocation,
+    bool clearBuildingName = false,
+    bool clearSpecificLocation = false,
     DateTime? eventDate,
     ReportStatus? status,
     ModerationStatus? moderationStatus,
@@ -194,8 +197,12 @@ class Report {
       description: description ?? this.description,
       photoPath: photoPath ?? this.photoPath,
       campusArea: campusArea ?? this.campusArea,
-      buildingName: buildingName ?? this.buildingName,
-      specificLocation: specificLocation ?? this.specificLocation,
+      buildingName: clearBuildingName
+          ? null
+          : buildingName ?? this.buildingName,
+      specificLocation: clearSpecificLocation
+          ? null
+          : specificLocation ?? this.specificLocation,
       eventDate: eventDate ?? this.eventDate,
       status: status ?? this.status,
       moderationStatus: moderationStatus ?? this.moderationStatus,

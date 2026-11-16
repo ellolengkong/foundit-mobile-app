@@ -25,5 +25,29 @@ void main() {
 
     // Verify center FAB exists.
     expect(find.byIcon(Icons.add), findsOneWidget);
+
+    final profileNavFinder = find.ancestor(
+      of: find.text('Profil'),
+      matching: find.byType(GestureDetector),
+    );
+    final profileNavItem = tester.widget<GestureDetector>(profileNavFinder);
+    expect(profileNavItem.behavior, HitTestBehavior.opaque);
+    expect(
+      find.descendant(
+        of: profileNavFinder,
+        matching: find.byType(AnimatedContainer),
+      ),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Profil'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.person), findsOneWidget);
+    expect(find.byIcon(Icons.home_outlined), findsOneWidget);
+
+    await tester.tap(find.text('Beranda'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.home), findsOneWidget);
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
   });
 }

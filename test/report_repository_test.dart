@@ -14,9 +14,8 @@ void main() {
     test('Initializes with mock reports and returns public reports', () {
       final reports = repository.getPublicReports();
       expect(reports.isNotEmpty, isTrue);
-      // All public reports must be active and visible
+      // Public feed may include resolved reports but never moderation-hidden ones.
       for (final r in reports) {
-        expect(r.status, ReportStatus.active);
         expect(r.moderationStatus, ModerationStatus.visible);
       }
     });
@@ -82,7 +81,7 @@ void main() {
       expect(repository.getPublicReports().first.id, 'new-123');
     });
 
-    test('Resolves report status to resolved', () {
+    test('Resolved reports remain in the public feed', () {
       final firstReport = repository.getPublicReports().first;
       expect(firstReport.status, ReportStatus.active);
 
@@ -90,9 +89,19 @@ void main() {
 
       final updated = repository.getReportById(firstReport.id);
       expect(updated!.status, ReportStatus.resolved);
-      // Resolved report should no longer appear in public feed
       expect(
         repository.getPublicReports().any((r) => r.id == firstReport.id),
+        isTrue,
+      );
+    });
+
+    test('Moderation-hidden reports are excluded from the public feed', () {
+      final reportId = repository.getPublicReports().first.id;
+
+      repository.setModerationStatus(reportId, ModerationStatus.hidden);
+
+      expect(
+        repository.getPublicReports().any((r) => r.id == reportId),
         isFalse,
       );
     });

@@ -234,9 +234,13 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
           category: _selectedCategory!,
           campusArea: _selectedArea!,
           buildingName: _selectedBuilding,
+          clearBuildingName: _selectedBuilding == null,
           specificLocation: _specificLocationController.text.trim().isNotEmpty
               ? _specificLocationController.text.trim()
               : null,
+          clearSpecificLocation: _specificLocationController.text
+              .trim()
+              .isEmpty,
           eventDate: _eventDate,
           description: _descriptionController.text.trim().isNotEmpty
               ? _descriptionController.text.trim()

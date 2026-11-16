@@ -184,7 +184,11 @@ class MatchingService {
   /// with score >= [threshold], sorted from highest score to lowest.
   static List<MatchPair> findMatches(List<Report> reports) {
     final activeVisibleReports = reports
-        .where((r) => r.isPubliclyVisible)
+        .where(
+          (r) =>
+              r.status == ReportStatus.active &&
+              r.isPubliclyVisible,
+        )
         .toList();
     final lostReports = activeVisibleReports
         .where((r) => r.reportType == ReportType.lost)

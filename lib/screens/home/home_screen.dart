@@ -9,6 +9,7 @@ import '../../widgets/filter_bottom_sheet.dart';
 import '../../widgets/report_card.dart';
 import '../../widgets/search_field.dart';
 import '../matches/matches_screen.dart';
+import '../notifications/notifications_screen.dart';
 import 'report_detail_screen.dart';
 
 /// Beranda — the main home screen.
@@ -188,6 +189,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
+                                      const Spacer(),
+                                      const NotificationBellButton(),
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(

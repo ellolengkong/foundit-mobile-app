@@ -13,7 +13,7 @@ abstract class ReportRepository extends ChangeNotifier {
   /// Unmodifiable view of all cached reports.
   List<Report> get allReports;
 
-  /// Returns publicly visible reports matching the filter criteria.
+  /// Returns active and resolved reports allowed by moderation, matching filters.
   List<Report> getPublicReports({
     ReportType? type,
     String? category,

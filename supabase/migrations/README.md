@@ -9,6 +9,11 @@ This directory contains versioned SQL migrations for the FoundIt database follow
 | `20261024045913_schema.sql` | Tables, constraints, indexes, triggers, `is_admin()`, and `public_reports` view |
 | `20261024050151_rls_policies.sql` | RLS enable, column-level grants, row-level policies, and admin moderation RPCs |
 | `20261024050328_storage.sql` | `report-photos` bucket registration, fixed `{report_id}/photo` Storage policies |
+| `20261101210000_notifications.sql` | In-app notifications for status changes, moderation updates, and matching reports |
+| `20261106230000_push_notification_tokens.sql` | Secure per-user FCM device token registration and cleanup |
+| `20261109010000_show_resolved_reports_in_feed.sql` | Includes active and resolved reports in the public feed while preserving moderation-hidden reports |
+| `20261116210000_notify_new_reports.sql` | Notifies all other registered users when a visible active report is created |
+| `20261116212500_skip_owner_status_notifications.sql` | Skips status notifications when the report owner changes their own report |
 
 ## Storage Convention: `report-photos`
 
