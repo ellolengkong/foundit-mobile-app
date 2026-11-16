@@ -812,11 +812,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: ReportStatusBadge(status: report.status),
-          ),
+          if (report.status != ReportStatus.resolved)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: ReportStatusBadge(status: report.status),
+            ),
         ],
       ),
     );

@@ -32,15 +32,49 @@ void main() {
     );
     final profileNavItem = tester.widget<GestureDetector>(profileNavFinder);
     expect(profileNavItem.behavior, HitTestBehavior.opaque);
+    final touchSurfaceFinder = find.byKey(
+      const ValueKey('nav-icon-touch-Profil'),
+    );
+    expect(touchSurfaceFinder, findsOneWidget);
     expect(
       find.descendant(
-        of: profileNavFinder,
+        of: touchSurfaceFinder,
         matching: find.byType(AnimatedContainer),
       ),
       findsNothing,
     );
 
-    await tester.tap(find.text('Profil'));
+    final profileIcon = find.byIcon(Icons.person_outline);
+    final press = await tester.startGesture(tester.getCenter(profileIcon));
+    await tester.pump(const Duration(milliseconds: 100));
+    final touchEffect = tester.widget<AnimatedScale>(
+      find.descendant(
+        of: touchSurfaceFinder,
+        matching: find.byType(AnimatedScale),
+      ),
+    );
+    expect(touchEffect.scale, 0.72);
+    expect(
+      find.descendant(
+        of: touchSurfaceFinder,
+        matching: find.byType(AnimatedContainer),
+      ),
+      findsNothing,
+    );
+
+    await press.up();
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(
+      tester
+          .widget<AnimatedScale>(
+            find.descendant(
+              of: touchSurfaceFinder,
+              matching: find.byType(AnimatedScale),
+            ),
+          )
+          .scale,
+      0.72,
+    );
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.person), findsOneWidget);
     expect(find.byIcon(Icons.home_outlined), findsOneWidget);

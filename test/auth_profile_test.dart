@@ -390,6 +390,7 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(find.text('Selesai'), findsNWidgets(2));
     });
 
     testWidgets('Account security shows verification and password reset', (

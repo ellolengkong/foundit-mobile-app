@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -104,18 +106,22 @@ class _AppShellState extends State<AppShell> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(
+              _NavItemButton(
+                key: const ValueKey('nav-icon-touch-Beranda'),
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home,
                 label: 'Beranda',
-                index: 0,
+                isSelected: _currentIndex == 0,
+                onTap: () => setState(() => _currentIndex = 0),
               ),
               const SizedBox(width: 48), // Notch space for FAB
-              _buildNavItem(
+              _NavItemButton(
+                key: const ValueKey('nav-icon-touch-Profil'),
                 icon: Icons.person_outline,
                 activeIcon: Icons.person,
                 label: 'Profil',
-                index: 1,
+                isSelected: _currentIndex == 1,
+                onTap: () => setState(() => _currentIndex = 1),
               ),
             ],
           ),
@@ -123,39 +129,90 @@ class _AppShellState extends State<AppShell> {
       ),
     );
   }
+}
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required int index,
-  }) {
-    final isSelected = _currentIndex == index;
-    final color = isSelected ? AppColors.primary : AppColors.textSecondary;
+class _NavItemButton extends StatefulWidget {
+  const _NavItemButton({
+    super.key,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  State<_NavItemButton> createState() => _NavItemButtonState();
+}
+
+class _NavItemButtonState extends State<_NavItemButton> {
+  bool _isPressed = false;
+  Timer? _releaseTimer;
+
+  @override
+  void dispose() {
+    _releaseTimer?.cancel();
+    super.dispose();
+  }
+
+  void _releaseAfterFeedback() {
+    _releaseTimer?.cancel();
+    _releaseTimer = Timer(const Duration(milliseconds: 160), () {
+      if (mounted && _isPressed) setState(() => _isPressed = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.isSelected
+        ? AppColors.primary
+        : AppColors.textSecondary;
 
     return Semantics(
       button: true,
-      selected: isSelected,
-      label: label,
+      selected: widget.isSelected,
+      label: widget.label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: isSelected
-            ? null
-            : () => setState(() => _currentIndex = index),
+        onTapDown: (_) {
+          _releaseTimer?.cancel();
+          if (!_isPressed) setState(() => _isPressed = true);
+        },
+        onTapUp: (_) => _releaseAfterFeedback(),
+        onTapCancel: () {
+          _releaseTimer?.cancel();
+          if (_isPressed) setState(() => _isPressed = false);
+        },
+        onTap: widget.onTap,
         child: ExcludeSemantics(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(isSelected ? activeIcon : icon, color: color, size: 21),
+                AnimatedScale(
+                  scale: _isPressed ? 0.72 : 1,
+                  duration: const Duration(milliseconds: 90),
+                  curve: Curves.easeOut,
+                  child: Icon(
+                    widget.isSelected ? widget.activeIcon : widget.icon,
+                    color: color,
+                    size: 21,
+                  ),
+                ),
                 const SizedBox(width: 7),
                 Text(
-                  label,
+                  widget.label,
                   style: TextStyle(
                     color: color,
                     fontSize: 12,
-                    fontWeight: isSelected
+                    fontWeight: widget.isSelected
                         ? FontWeight.w700
                         : FontWeight.w500,
                   ),
