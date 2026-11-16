@@ -25,6 +25,17 @@ void main() {
   });
 
   group('SupabaseAuthService Exception Mapping & Normalization', () {
+    test('email and password recovery redirects use registered app links', () {
+      expect(
+        SupabaseAuthService.emailConfirmationRedirect,
+        'com.example.foundit://login-callback',
+      );
+      expect(
+        SupabaseAuthService.passwordRecoveryRedirect,
+        'com.example.foundit://reset-password',
+      );
+    });
+
     test('maps invalid login credentials message', () {
       final msg = SupabaseAuthService.mapAuthException(
         const AuthException('Invalid login credentials'),

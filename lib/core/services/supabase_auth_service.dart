@@ -29,6 +29,8 @@ class SupabaseAuthService extends AuthService {
   String? _passwordRecoveryError;
   Future<void> Function()? beforeSignOut;
 
+  static const emailConfirmationRedirect =
+      'com.example.foundit://login-callback';
   static const passwordRecoveryRedirect =
       'com.example.foundit://reset-password';
 
@@ -243,6 +245,7 @@ class SupabaseAuthService extends AuthService {
       final response = await _client.auth.signUp(
         email: email.trim(),
         password: password,
+        emailRedirectTo: emailConfirmationRedirect,
         data: {
           'full_name': fullName.trim(),
           'account_type': accountType.key,
