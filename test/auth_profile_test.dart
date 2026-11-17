@@ -109,6 +109,60 @@ void main() {
       },
     );
 
+    test('updateWhatsappNumber updates number and preserves allowWhatsappContact = false', () async {
+      final auth = MockAuthService();
+      await auth.signUp(
+        fullName: 'Dave Miller',
+        email: 'dave@unsrat.ac.id',
+        password: 'password123',
+        whatsapp: '089988776655',
+        allowWhatsappContact: false,
+      );
+
+      await auth.updateWhatsappNumber('081122334455');
+
+      expect(auth.currentUser!.contact!.whatsappNumber, '6281122334455');
+      expect(auth.currentUser!.contact!.allowWhatsappContact, isFalse);
+    });
+
+    test('updateWhatsappNumber updates number and preserves allowWhatsappContact = true', () async {
+      final auth = MockAuthService();
+      await auth.signUp(
+        fullName: 'Dave Miller',
+        email: 'dave@unsrat.ac.id',
+        password: 'password123',
+        whatsapp: '089988776655',
+        allowWhatsappContact: true,
+      );
+
+      await auth.updateWhatsappNumber('085566778899');
+
+      expect(auth.currentUser!.contact!.whatsappNumber, '6285566778899');
+      expect(auth.currentUser!.contact!.allowWhatsappContact, isTrue);
+    });
+
+    test(
+      'updateWhatsappNumber rejects invalid number and keeps original number',
+      () async {
+        final auth = MockAuthService();
+        await auth.signUp(
+          fullName: 'Dave Miller',
+          email: 'dave@unsrat.ac.id',
+          password: 'password123',
+          whatsapp: '089988776655',
+          allowWhatsappContact: true,
+        );
+
+        await expectLater(
+          auth.updateWhatsappNumber('123'),
+          throwsA(isA<AuthFailure>()),
+        );
+
+        expect(auth.currentUser!.contact!.whatsappNumber, '6289988776655');
+        expect(auth.currentUser!.contact!.allowWhatsappContact, isTrue);
+      },
+    );
+
     test('logout resets session, user profile, and admin mode', () {
       final auth = MockAuthService();
       auth.login(email: 'admin@unsrat.ac.id', password: 'password123');
@@ -306,6 +360,52 @@ void main() {
 
       expect(find.byType(TextFormField), findsOneWidget);
       expect(find.text('Nomor WhatsApp'), findsNothing);
+    });
+
+    testWidgets('Profile allows editing WhatsApp number via dialog', (
+      tester,
+    ) async {
+      final auth = MockAuthService();
+      await auth.signUp(
+        fullName: 'Eka Mahasiswa',
+        email: 'eka@unsrat.ac.id',
+        password: 'password123',
+        whatsapp: '081234567890',
+        allowWhatsappContact: true,
+      );
+
+      await tester.pumpWidget(
+        FoundItApp(
+          repository: MockReportRepository(),
+          authService: auth,
+          flagRepository: MockFlagRepository(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Profil'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('6281234567890'), findsOneWidget);
+      expect(find.text('Ubah'), findsOneWidget);
+
+      await tester.tap(find.text('Ubah'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ganti Nomor WhatsApp'), findsOneWidget);
+      final phoneField = find.widgetWithText(
+        TextFormField,
+        'Nomor WhatsApp Baru *',
+      );
+      expect(phoneField, findsOneWidget);
+
+      await tester.enterText(phoneField, '089988776655');
+      await tester.tap(find.text('Simpan'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nomor WhatsApp berhasil diperbarui.'), findsOneWidget);
+      expect(find.textContaining('6289988776655'), findsOneWidget);
+      expect(auth.currentUser!.contact!.whatsappNumber, '6289988776655');
+      expect(auth.currentUser!.contact!.allowWhatsappContact, isTrue);
     });
 
     testWidgets('Profile shows un-saved status when contact is not stored', (

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/report_enums.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/whatsapp_number.dart';
 import '../../data/mock/foundit_scope.dart';
 import '../../data/models/report.dart';
 import '../../data/models/user_profile.dart';
@@ -588,6 +589,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _handleEditWhatsapp(
+    BuildContext context,
+    FoundItScope scope,
+    UserProfile user,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (_) =>
+          _ChangeWhatsappDialog(currentNumber: user.contact?.whatsappNumber),
+    );
+
+    if (updated == true && mounted) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Nomor WhatsApp berhasil diperbarui.')),
+      );
+    }
+  }
+
   Widget _buildAccountCard(
     BuildContext context,
     FoundItScope scope,
@@ -747,6 +767,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => _handleEditWhatsapp(context, scope, user),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.edit_outlined,
+                          size: 13,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Ubah',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -1156,6 +1209,144 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           onPressed: _submit,
           style: FilledButton.styleFrom(backgroundColor: AppColors.error),
           child: const Text('Hapus Permanen'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChangeWhatsappDialog extends StatefulWidget {
+  const _ChangeWhatsappDialog({this.currentNumber});
+
+  final String? currentNumber;
+
+  @override
+  State<_ChangeWhatsappDialog> createState() => _ChangeWhatsappDialogState();
+}
+
+class _ChangeWhatsappDialogState extends State<_ChangeWhatsappDialog> {
+  final _phoneController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isSaving = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.currentNumber != null) {
+      _phoneController.text = widget.currentNumber!;
+    }
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final raw = _phoneController.text.trim();
+    final normalized = normalizeWhatsappNumber(raw);
+    if (normalized == null) {
+      setState(() {
+        _errorMessage = 'Nomor WhatsApp harus 10-15 digit angka yang valid.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final scope = FoundItScope.of(context);
+      await scope.authService.updateWhatsappNumber(normalized);
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is AuthFailure
+          ? e.message
+          : 'Gagal memperbarui nomor WhatsApp. Periksa koneksi internet Anda.';
+      setState(() {
+        _isSaving = false;
+        _errorMessage = msg;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      icon: const Icon(Icons.phone_iphone_rounded, color: AppColors.primary),
+      title: const Text('Ganti Nomor WhatsApp'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Nomor ini akan digunakan ketika penemu atau pemilik barang menghubungi Anda terkait barang yang dilaporkan.',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                autofocus: true,
+                enabled: !_isSaving,
+                decoration: const InputDecoration(
+                  labelText: 'Nomor WhatsApp Baru *',
+                  hintText: '08123456789 atau 628123456789',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Nomor WhatsApp wajib diisi.';
+                  }
+                  if (normalizeWhatsappNumber(val) == null) {
+                    return 'Nomor WhatsApp harus 10-15 digit angka.';
+                  }
+                  return null;
+                },
+                onFieldSubmitted: (_) => _submit(),
+              ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: _isSaving ? null : _submit,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Simpan'),
         ),
       ],
     );

@@ -353,6 +353,40 @@ class SupabaseAuthService extends AuthService {
   }
 
   @override
+  Future<void> updateWhatsappNumber(String whatsapp) async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw const AuthFailure('Tidak ada pengguna yang sedang masuk.');
+    }
+
+    final normalized = normalizeWhatsapp(whatsapp);
+    if (normalized == null) {
+      throw const AuthFailure(
+        'Nomor WhatsApp wajib diisi dengan 10-15 digit yang valid.',
+      );
+    }
+
+    try {
+      // Update whatsapp_number in public.user_contacts directly.
+      // allow_whatsapp_contact is not touched.
+      await _client
+          .from('user_contacts')
+          .update({'whatsapp_number': normalized})
+          .eq('user_id', user.id);
+
+      // Reload profile to refresh local state and notify listeners
+      await _loadUserProfile(user);
+    } on PostgrestException catch (e) {
+      throw AuthFailure(e.message);
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw const AuthFailure(
+        'Gagal memperbarui nomor WhatsApp. Periksa koneksi internet Anda.',
+      );
+    }
+  }
+
+  @override
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _client.auth.resetPasswordForEmail(

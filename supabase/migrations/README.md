@@ -14,6 +14,8 @@ This directory contains versioned SQL migrations for the FoundIt database follow
 | `20261109010000_show_resolved_reports_in_feed.sql` | Includes active and resolved reports in the public feed while preserving moderation-hidden reports |
 | `20261116210000_notify_new_reports.sql` | Notifies all other registered users when a visible active report is created |
 | `20261116212500_skip_owner_status_notifications.sql` | Skips status notifications when the report owner changes their own report |
+| `20261117120000_hide_resolved_reports_from_feed.sql` | Excludes resolved reports from the public feed view while keeping them available to owners |
+| `20261117120500_allow_whatsapp_update.sql` | Grants authenticated users column-level UPDATE permission on their own whatsapp_number |
 
 ## Storage Convention: `report-photos`
 

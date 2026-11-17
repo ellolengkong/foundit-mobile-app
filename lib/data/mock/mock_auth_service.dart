@@ -163,6 +163,31 @@ class MockAuthService extends AuthService {
   }
 
   @override
+  Future<void> updateWhatsappNumber(String whatsapp) async {
+    if (_currentUser == null) {
+      throw const AuthFailure('Tidak ada pengguna yang sedang masuk.');
+    }
+    final normalized = normalizeWhatsappNumber(whatsapp);
+    if (normalized == null) {
+      throw const AuthFailure(
+        'Nomor WhatsApp wajib diisi dengan 10-15 digit yang valid.',
+      );
+    }
+    final now = DateTime.now();
+    final currentContact = _currentUser!.contact;
+    _currentUser = _currentUser!.copyWith(
+      contact: UserContact(
+        userId: _currentUser!.id,
+        whatsappNumber: normalized,
+        allowWhatsappContact: currentContact?.allowWhatsappContact ?? false,
+        updatedAt: now,
+      ),
+      updatedAt: now,
+    );
+    notifyListeners();
+  }
+
+  @override
   Future<void> sendPasswordResetEmail(String email) {
     return Future.value();
   }

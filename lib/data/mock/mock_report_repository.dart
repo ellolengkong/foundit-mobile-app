@@ -20,7 +20,7 @@ class MockReportRepository extends ReportRepository {
 
   /// Returns publicly visible reports filtered by criteria.
   ///
-  /// Public feed rule: active and resolved reports appear unless hidden by moderation.
+  /// Public feed rule: only active reports appear unless hidden by moderation.
   @override
   List<Report> getPublicReports({
     ReportType? type,
@@ -33,6 +33,7 @@ class MockReportRepository extends ReportRepository {
   }) {
     return _reports.where((r) {
       if (!r.isPubliclyVisible) return false;
+      if (r.status != ReportStatus.active) return false;
 
       if (type != null && r.reportType != type) return false;
       if (category != null && category.isNotEmpty && r.category != category) {

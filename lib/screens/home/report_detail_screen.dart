@@ -45,6 +45,22 @@ class ReportDetailScreen extends StatelessWidget {
             currentUser != null &&
             (currentUser.id == report.ownerId ||
                 scope.repository.isUserReportOwner(report.id, currentUser.id));
+        final isAdmin = scope.authService.canAccessAdmin;
+
+        if (report.status == ReportStatus.resolved && !isOwner && !isAdmin) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Detail Laporan')),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Laporan ini telah selesai dan tidak lagi tersedia untuk publik.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          );
+        }
         final categoryLabel =
             categoryByKey(report.category)?.label ?? report.category;
 

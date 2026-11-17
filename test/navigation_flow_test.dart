@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foundit/app.dart';
+import 'package:foundit/data/mock/foundit_scope.dart';
 import 'package:foundit/data/mock/mock_auth_service.dart';
+import 'package:foundit/data/mock/mock_flag_repository.dart';
 import 'package:foundit/data/mock/mock_report_repository.dart';
+import 'package:foundit/screens/home/report_detail_screen.dart';
 
 void main() {
   group('Navigation & App Flow Tests', () {
@@ -163,5 +166,70 @@ void main() {
       expect(find.text('Detail Laporan'), findsOneWidget);
       expect(find.text('Deskripsi Publik'), findsOneWidget);
     });
+
+    testWidgets('Guest opening resolved report is blocked', (tester) async {
+      final auth = MockAuthService();
+      final repo = MockReportRepository();
+      final report = repo.allReports.first;
+      repo.resolveReport(report.id);
+
+      await tester.pumpWidget(
+        FoundItScope(
+          authService: auth,
+          repository: repo,
+          flagRepository: MockFlagRepository(),
+          child: MaterialApp(home: ReportDetailScreen(reportId: report.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Detail Laporan'), findsOneWidget);
+      expect(
+        find.text(
+          'Laporan ini telah selesai dan tidak lagi tersedia untuk publik.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'Owner opening resolved report sees full detail and can reactivate',
+      (tester) async {
+        final auth = MockAuthService();
+        final repo = MockReportRepository();
+        final report = repo.allReports.first;
+        repo.resolveReport(report.id);
+
+        // Login as report owner
+        auth.login(
+          email: '${report.ownerId}@unsrat.ac.id',
+          password: 'password123',
+        );
+
+        await tester.pumpWidget(
+          FoundItScope(
+            authService: auth,
+            repository: repo,
+            flagRepository: MockFlagRepository(),
+            child: MaterialApp(home: ReportDetailScreen(reportId: report.id)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Detail Laporan'), findsOneWidget);
+        expect(find.text('Selesai'), findsWidgets);
+        final reactivateBtn = find.text('Aktifkan Kembali Laporan');
+        expect(reactivateBtn, findsOneWidget);
+
+        // Scroll to button and reactivate
+        await tester.ensureVisible(reactivateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(reactivateBtn);
+        await tester.pumpAndSettle();
+
+        expect(repo.getReportById(report.id)?.status.name, 'active');
+        expect(repo.getPublicReports().any((r) => r.id == report.id), isTrue);
+      },
+    );
   });
 }

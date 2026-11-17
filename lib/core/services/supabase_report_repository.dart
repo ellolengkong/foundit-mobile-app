@@ -47,6 +47,7 @@ class SupabaseReportRepository extends ReportRepository {
   }) {
     return _publicReports.where((r) {
       if (!r.isPubliclyVisible) return false;
+      if (r.status != ReportStatus.active) return false;
 
       if (type != null && r.reportType != type) return false;
       if (category != null && category.isNotEmpty && r.category != category) {
@@ -117,12 +118,8 @@ class SupabaseReportRepository extends ReportRepository {
 
   @override
   bool isUserReportOwner(String reportId, String userId) {
-    return _userReports.any(
-          (r) => r.id == reportId && r.isOwnedBy(userId),
-        ) ||
-        _publicReports.any(
-          (r) => r.id == reportId && r.isOwnedBy(userId),
-        );
+    return _userReports.any((r) => r.id == reportId && r.isOwnedBy(userId)) ||
+        _publicReports.any((r) => r.id == reportId && r.isOwnedBy(userId));
   }
 
   @override
@@ -165,6 +162,8 @@ class SupabaseReportRepository extends ReportRepository {
       notifyListeners();
     } catch (e) {
       debugPrint('Failed to fetch admin reports: $e');
+      _errorMessage = e.toString();
+      notifyListeners();
     }
   }
 
@@ -205,6 +204,8 @@ class SupabaseReportRepository extends ReportRepository {
       notifyListeners();
     } catch (e) {
       debugPrint('Failed to fetch user reports: $e');
+      _errorMessage = e.toString();
+      notifyListeners();
     }
   }
 
@@ -261,7 +262,8 @@ class SupabaseReportRepository extends ReportRepository {
     }
 
     _userReports.insert(0, createdReport);
-    if (createdReport.isPubliclyVisible) {
+    if (createdReport.isPubliclyVisible &&
+        createdReport.status == ReportStatus.active) {
       _publicReports.insert(0, createdReport);
     }
     notifyListeners();
@@ -323,13 +325,16 @@ class SupabaseReportRepository extends ReportRepository {
     }
 
     final pubIdx = _publicReports.indexWhere((r) => r.id == updated.id);
+    final shouldBePublic =
+        finalReport.isPubliclyVisible &&
+        finalReport.status == ReportStatus.active;
     if (pubIdx != -1) {
-      if (finalReport.isPubliclyVisible) {
+      if (shouldBePublic) {
         _publicReports[pubIdx] = finalReport;
       } else {
         _publicReports.removeAt(pubIdx);
       }
-    } else if (finalReport.isPubliclyVisible) {
+    } else if (shouldBePublic) {
       _publicReports.insert(0, finalReport);
     }
 
@@ -363,7 +368,7 @@ class SupabaseReportRepository extends ReportRepository {
         updatedAt: DateTime.now(),
       );
       _userReports[userIdx] = updated;
-      if (updated.isPubliclyVisible) {
+      if (updated.isPubliclyVisible && updated.status == ReportStatus.active) {
         _publicReports.insert(0, updated);
       }
     }

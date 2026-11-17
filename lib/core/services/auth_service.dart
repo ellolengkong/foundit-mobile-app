@@ -82,6 +82,11 @@ abstract class AuthService extends ChangeNotifier {
     bool? allowWhatsappContact,
   });
 
+  /// Updates the WhatsApp phone number for the active user.
+  ///
+  /// Preserves the existing [allowWhatsappContact] consent setting.
+  Future<void> updateWhatsappNumber(String whatsapp);
+
   /// Sends a password reset email to the specified address.
   Future<void> sendPasswordResetEmail(String email);
 

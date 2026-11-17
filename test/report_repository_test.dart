@@ -81,7 +81,7 @@ void main() {
       expect(repository.getPublicReports().first.id, 'new-123');
     });
 
-    test('Resolved reports remain in the public feed', () {
+    test('Resolved reports are excluded from the public feed but remain in user reports', () {
       final firstReport = repository.getPublicReports().first;
       expect(firstReport.status, ReportStatus.active);
 
@@ -89,6 +89,27 @@ void main() {
 
       final updated = repository.getReportById(firstReport.id);
       expect(updated!.status, ReportStatus.resolved);
+      expect(
+        repository.getPublicReports().any((r) => r.id == firstReport.id),
+        isFalse,
+      );
+      expect(
+        repository
+            .getUserReports(firstReport.ownerId)
+            .any((r) => r.id == firstReport.id),
+        isTrue,
+      );
+    });
+
+    test('Reopened reports reappear in the public feed', () {
+      final firstReport = repository.getPublicReports().first;
+      repository.resolveReport(firstReport.id);
+      expect(
+        repository.getPublicReports().any((r) => r.id == firstReport.id),
+        isFalse,
+      );
+
+      repository.reopenReport(firstReport.id);
       expect(
         repository.getPublicReports().any((r) => r.id == firstReport.id),
         isTrue,
